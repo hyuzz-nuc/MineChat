@@ -1,14 +1,16 @@
-import express from 'express';
+import express, { type Express } from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { config } from './config/index.js';
 import { logger } from './utils/logger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import { socketAuthMiddleware } from './socket/middleware/auth.js';
+import { registerMessageHandlers } from './socket/handlers/message.js';
 import indexRouter from './routes/index.js';
 
 /** 创建Express应用 */
-const app = express();
+const app: Express = express();
 
 /** 创建HTTP服务器 */
 const httpServer = createServer(app);
@@ -39,17 +41,19 @@ app.use(errorHandler);
 
 /* ────────────── Socket.IO ────────────── */
 
-io.on('connection', (socket) => {
-  logger.info(`Socket connected: ${socket.id}`);
+// 鉴权中间件
+io.use(socketAuthMiddleware);
 
-  // 心跳：客户端可定时发送 ping 事件
+// 连接处理
+io.on('connection', (socket) => {
+  logger.info(`Socket connected: ${socket.id} (user: ${socket.userId})`);
+
+  // 注册消息事件处理器
+  registerMessageHandlers(io, socket);
+
+  // 心跳
   socket.on('ping', () => {
     socket.emit('pong', { timestamp: Date.now() });
-  });
-
-  // 断开连接
-  socket.on('disconnect', (reason) => {
-    logger.info(`Socket disconnected: ${socket.id} (${reason})`);
   });
 });
 
