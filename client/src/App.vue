@@ -1,12 +1,15 @@
 <script setup lang="ts">
 /**
  * MineChat 根组件
- * SVG噪点纹理 + Electron标题栏 + 路由出口
+ * 粒子动态背景 + SVG噪点纹理 + Electron标题栏 + 路由出口
  */
+import ParticleBackground from './components/ParticleBackground.vue';
 import TitleBar from './components/TitleBar.vue';
 </script>
 
 <template>
+  <!-- 粒子动态背景（z-index:0, 最底层） -->
+  <ParticleBackground />
   <!-- SVG 噪点纹理滤镜（全局复用） -->
   <svg class="svg-filters" aria-hidden="true">
     <defs>

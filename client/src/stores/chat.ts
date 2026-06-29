@@ -1,11 +1,30 @@
 /**
  * 聊天状态管理
- * 管理会话列表、当前聊天、消息列表
+ * 管理会话列表、当前聊天、消息列表、好友列表
  */
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { getConversationsApi, getRoomMessagesApi, markReadApi, createDirectRoomApi } from '../api/message';
+import { getFriendListApi, getPendingRequestsApi, acceptFriendRequestApi, rejectFriendRequestApi } from '../api/friend';
 import { useSocket } from '../composables/useSocket';
+
+/** 好友项类型 */
+export interface Friend {
+  friendshipId: string;
+  userId: string;
+  username: string;
+  nickname: string;
+  avatar: string | null;
+  status: string;
+}
+
+/** 好友请求类型 */
+export interface FriendRequest {
+  id: string;
+  requesterId: string;
+  requester: { id: string; username: string; nickname: string; avatar: string | null };
+  createdAt: string;
+}
 
 /** 会话项类型 */
 export interface Conversation {
@@ -63,6 +82,15 @@ export const useChatStore = defineStore('chat', () => {
   const loadingMessages = ref(false);
   /** 打字状态：roomId -> userId[] */
   const typingUsers = ref<Record<string, string[]>>({});
+
+  /** 侧边栏视图：会话 / 好友 */
+  const sidebarView = ref<'conversations' | 'friends'>('conversations');
+  /** 好友列表 */
+  const friends = ref<Friend[]>([]);
+  /** 待处理好友请求 */
+  const pendingRequests = ref<FriendRequest[]>([]);
+  /** 好友加载状态 */
+  const loadingFriends = ref(false);
 
   /** 当前会话 */
   const currentConversation = computed(() =>
@@ -221,6 +249,76 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  // ─── 好友功能 ───
+
+  /** 切换侧边栏视图 */
+  function switchSidebar(view: 'conversations' | 'friends') {
+    sidebarView.value = view;
+    if (view === 'friends' && friends.value.length === 0) {
+      fetchFriends();
+      fetchPendingRequests();
+    }
+  }
+
+  /** 获取好友列表 */
+  async function fetchFriends() {
+    loadingFriends.value = true;
+    try {
+      const res: any = await getFriendListApi();
+      friends.value = res.data;
+    } catch (err) {
+      console.error('获取好友列表失败:', err);
+    } finally {
+      loadingFriends.value = false;
+    }
+  }
+
+  /** 获取待处理好友请求 */
+  async function fetchPendingRequests() {
+    try {
+      const res: any = await getPendingRequestsApi();
+      pendingRequests.value = res.data;
+    } catch (err) {
+      console.error('获取好友请求失败:', err);
+    }
+  }
+
+  /** 同意好友请求 */
+  async function acceptRequest(friendshipId: string) {
+    try {
+      await acceptFriendRequestApi(friendshipId);
+      // 从待处理列表移除
+      pendingRequests.value = pendingRequests.value.filter((r) => r.id !== friendshipId);
+      // 刷新好友列表
+      await fetchFriends();
+    } catch (err) {
+      console.error('同意好友请求失败:', err);
+    }
+  }
+
+  /** 拒绝好友请求 */
+  async function rejectRequest(friendshipId: string) {
+    try {
+      await rejectFriendRequestApi(friendshipId);
+      pendingRequests.value = pendingRequests.value.filter((r) => r.id !== friendshipId);
+    } catch (err) {
+      console.error('拒绝好友请求失败:', err);
+    }
+  }
+
+  /** 从好友列表发起私聊 */
+  async function startChatWithFriend(userId: string) {
+    try {
+      const roomId = await startDirectChat(userId);
+      // 切回会话视图
+      sidebarView.value = 'conversations';
+      return roomId;
+    } catch (err) {
+      console.error('发起私聊失败:', err);
+      throw err;
+    }
+  }
+
   return {
     conversations,
     currentRoomId,
@@ -230,6 +328,18 @@ export const useChatStore = defineStore('chat', () => {
     typingUsers,
     currentConversation,
     totalUnread,
+    // 好友功能
+    sidebarView,
+    friends,
+    pendingRequests,
+    loadingFriends,
+    switchSidebar,
+    fetchFriends,
+    fetchPendingRequests,
+    acceptRequest,
+    rejectRequest,
+    startChatWithFriend,
+    // 基础功能
     fetchConversations,
     selectConversation,
     fetchMessages,
