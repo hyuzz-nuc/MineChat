@@ -1,0 +1,177 @@
+// MineChat 数据库 Schema
+// 数据库：PostgreSQL 15+
+// ORM：Prisma 5.x
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ────────────── 用户表 ──────────────
+model User {
+  id           String    @id @default(cuid())
+  username     String    @unique @db.VarChar(32)
+  email        String    @unique @db.VarChar(255)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  nickname     String    @db.VarChar(32)
+  avatar       String?   @db.VarChar(512)
+  bio          String?   @db.VarChar(200)
+  status       UserStatus @default(OFFLINE)
+  lastSeenAt   DateTime? @map("last_seen_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // 关联
+  sentMessages     Message[]       @relation("SentMessages")
+  receivedMessages RoomMember[]    @relation("UserRooms")
+  sentFriendReqs   Friendship[]    @relation("SentFriendRequests")
+  receivedFriendReqs Friendship[]  @relation("ReceivedFriendRequests")
+  ownedGroups      Group[]         @relation("GroupOwner")
+  uploadedFiles    FileUpload[]    @relation("UploadedFiles")
+
+  @@map("users")
+}
+
+enum UserStatus {
+  ONLINE
+  OFFLINE
+  BUSY
+}
+
+// ────────────── 房间表（私聊/群聊统一） ──────────────
+model Room {
+  id        String   @id @default(cuid())
+  type      RoomType @default(DIRECT)
+  name      String?  @db.VarChar(64)
+  avatar    String?  @db.VarChar(512)
+  lastMsgAt DateTime @default(now()) @map("last_msg_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // 关联
+  members  RoomMember[] @relation("RoomMembers")
+  messages Message[]    @relation("RoomMessages")
+  group    Group?       @relation("RoomGroup")
+
+  @@map("rooms")
+}
+
+enum RoomType {
+  DIRECT   // 一对一私聊
+  GROUP    // 群聊
+}
+
+// ────────────── 房间成员表 ──────────────
+model RoomMember {
+  id       String     @id @default(cuid())
+  roomId   String     @map("room_id")
+  userId   String     @map("user_id")
+  role     MemberRole @default(MEMBER)
+  lastRead DateTime?  @map("last_read")
+  joinedAt DateTime   @default(now()) @map("joined_at")
+
+  // 关联
+  room Room @relation("RoomMembers", fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation("UserRooms", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@map("room_members")
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+// ────────────── 消息表 ──────────────
+model Message {
+  id        String      @id @default(cuid())
+  roomId    String      @map("room_id")
+  senderId  String      @map("sender_id")
+  type      MessageType @default(TEXT)
+  content   String      @db.Text
+  status    MsgStatus   @default(SENT)
+  replyTo   String?     @map("reply_to") @db.VarChar(30)
+  deletedAt DateTime?   @map("deleted_at")
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  // 关联
+  room   Room  @relation("RoomMessages", fields: [roomId], references: [id], onDelete: Cascade)
+  sender User  @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, createdAt])
+  @@index([senderId])
+  @@map("messages")
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  SYSTEM
+}
+
+enum MsgStatus {
+  SENT       // 已发送
+  DELIVERED  // 已送达
+  READ       // 已读
+}
+
+// ────────────── 好友关系表 ──────────────
+model Friendship {
+  id          String         @id @default(cuid())
+  requesterId String         @map("requester_id")
+  addresseeId String         @map("addressee_id")
+  status      FriendStatus   @default(PENDING)
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  // 关联
+  requester User @relation("SentFriendRequests", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("ReceivedFriendRequests", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@map("friendships")
+}
+
+enum FriendStatus {
+  PENDING   // 待处理
+  ACCEPTED  // 已通过
+  REJECTED  // 已拒绝
+}
+
+// ────────────── 群组扩展信息 ──────────────
+model Group {
+  id          String @id @default(cuid())
+  roomId      String @unique @map("room_id")
+  ownerId     String @map("owner_id")
+  description String? @db.VarChar(200)
+  announcement String? @map("announcement") @db.VarChar(500)
+
+  // 关联
+  room  Room  @relation("RoomGroup", fields: [roomId], references: [id], onDelete: Cascade)
+  owner User  @relation("GroupOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@map("groups")
+}
+
+// ────────────── 文件上传记录 ──────────────
+model FileUpload {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  fileName  String   @map("file_name") @db.VarChar(255)
+  filePath  String   @map("file_path") @db.VarChar(512)
+  fileSize  Int      @map("file_size")
+  mimeType  String   @map("mime_type") @db.VarChar(128)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // 关联
+  user User @relation("UploadedFiles", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("file_uploads")
+}
