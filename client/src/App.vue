@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
+/** MineChat 根组件 */
 </script>
 
 <template>
-  <HelloWorld />
+  <router-view />
 </template>

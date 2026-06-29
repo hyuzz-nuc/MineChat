@@ -1,0 +1,68 @@
+/* ================================================================
+   MineChat 毛玻璃效果样式
+   三层体系：侧栏 / 面板 / 弹窗
+   ================================================================ */
+
+/* ────────────── 层级1：侧栏毛玻璃 ────────────── */
+.glass-sidebar {
+  background: var(--glass-sidebar-bg);
+  backdrop-filter: var(--glass-sidebar-filter);
+  -webkit-backdrop-filter: var(--glass-sidebar-filter);
+  border-right: var(--glass-sidebar-border);
+  box-shadow: var(--glass-sidebar-shadow);
+}
+
+/* ────────────── 层级2：面板/卡片毛玻璃 ────────────── */
+.glass-panel {
+  background: var(--glass-panel-bg);
+  backdrop-filter: var(--glass-panel-filter);
+  -webkit-backdrop-filter: var(--glass-panel-filter);
+  border: var(--glass-panel-border);
+  box-shadow: var(--glass-panel-shadow);
+  transition: border-color var(--duration-fast) var(--ease-out-expo),
+              background var(--duration-fast) var(--ease-out-expo),
+              box-shadow var(--duration-fast) var(--ease-out-expo),
+              transform var(--duration-fast) var(--ease-out-expo);
+}
+
+.glass-panel:focus-within {
+  border-color: rgba(var(--accent-rgb), .50);
+  background: var(--glass-panel-bg-focus);
+  box-shadow: var(--glass-panel-shadow-focus);
+  transform: translateY(-1px);
+}
+
+/* ────────────── 层级3：弹窗/浮层毛玻璃 ────────────── */
+.glass-overlay {
+  background: var(--glass-overlay-bg);
+  backdrop-filter: var(--glass-overlay-filter);
+  -webkit-backdrop-filter: var(--glass-overlay-filter);
+  border: var(--glass-overlay-border);
+  box-shadow: var(--glass-overlay-shadow);
+}
+
+/* ────────────── 控制栏毛玻璃（底部栏/按钮） ────────────── */
+.glass-control {
+  background: var(--glass-control-bg);
+  backdrop-filter: var(--glass-control-filter);
+  -webkit-backdrop-filter: var(--glass-control-filter);
+  box-shadow: var(--glass-control-shadow);
+  border: 0;
+}
+
+.glass-control:hover {
+  background: var(--glass-control-hover-bg);
+  box-shadow: var(--glass-control-hover-shadow);
+}
+
+/* ────────────── 消息气泡毛玻璃 ────────────── */
+.glass-bubble-self {
+  background: var(--bubble-self);
+  border: 1px solid var(--bubble-self-border);
+  box-shadow: 0 0 20px rgba(0, 245, 212, .04);
+}
+
+.glass-bubble-other {
+  background: var(--bubble-other);
+  border: 1px solid var(--bubble-other-border);
+}
