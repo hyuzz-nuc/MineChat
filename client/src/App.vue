@@ -1,8 +1,9 @@
 <script setup lang="ts">
 /**
  * MineChat 根组件
- * 包含SVG噪点纹理定义 + 路由出口
+ * SVG噪点纹理 + Electron标题栏 + 路由出口
  */
+import TitleBar from './components/TitleBar.vue';
 </script>
 
 <template>
@@ -15,11 +16,13 @@
       </filter>
     </defs>
   </svg>
+  <!-- Electron 桌面版标题栏（Web版自动隐藏） -->
+  <TitleBar />
   <router-view />
 </template>
 
 <style>
-/* SVG滤镜容器：不可见，不影响布局 */
+/* SVG滤镜容器 */
 .svg-filters {
   position: fixed;
   top: 0;
