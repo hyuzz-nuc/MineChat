@@ -3,47 +3,67 @@
 ## 当前状态
 
 **分支**: `DEV-1.0.0` (已合并到 main)
-**最新提交**: `1f361af` feat: 集成Redis(DB1) - 在线状态/Token黑名单/用户状态枚举扩展AWAY
+**最新提交**: `51f087d` docs: 完善README+更新进度文档
 **远程仓库**: `git@github.com:hyuzz-nuc/MineChat.git`
 
-## 已完成阶段
+## 环境状态
 
-| 阶段 | 内容 | 状态 |
+| 组件 | 状态 | 地址 |
 |------|------|------|
-| 1 | 需求分析与UI/UX概念设计 | ✅ |
-| 2 | 技术选型与架构搭建 | ✅ |
-| 3 | 数据库设计 (Prisma + PostgreSQL) | ✅ |
-| 4 | 核心功能开发 (用户/消息/社交) | ✅ |
-| 5 | API接口文档 | ✅ |
-| 6 | UI细节打磨 (毛玻璃/噪点/微动效) | ✅ |
-| 7 | 本地联调与构建验证 | ✅ |
-| 8 | 部署方案文档 | ✅ |
-| 9 | Electron桌面版 + Redis集成 | ✅ |
-
-## 中间件状态
-
-| 组件 | 状态 | 说明 |
-|------|------|------|
-| PostgreSQL 18.4 | ✅ 运行中 | `minechat` 数据库, 用户: postgres, 密码: 123456 |
-| Redis | ✅ 运行中 | DB1 隔离 MineChat 数据 |
+| PostgreSQL 18.4 | ✅ 运行中 | localhost:5432, DB: minechat |
+| Redis | ✅ 运行中 | localhost:6379/1 |
 | 后端 Express | ✅ 运行中 | http://localhost:3000 |
 | 前端 Vite | ⏳ 待启动 | http://localhost:5173 |
 
-## Redis 集成详情
+## 已完成功能
 
-- **配置**: `server/src/config/redis.ts` — ioredis 单例, DB1, 自动重连
-- **在线状态**: `server/src/services/presence.service.ts` — 替代内存 Map, 支持多进程
-- **Token黑名单**: `server/src/services/token-blacklist.service.ts` — 登出/改密码时吊销
-- **Key规范**:
-  - `presence:online` — SET, 在线用户集合
-  - `presence:{userId}:sockets` — SET, socketId 集合
-  - `presence:{userId}:status` — STRING, 用户状态
-  - `token:blacklist:{jti}` — STRING+TTL, 黑名单
+1. **用户系统**: 注册/登录/JWT双令牌/Token刷新
+2. **实时消息**: Socket.IO/发送接收/已读回执/打字状态/在线状态
+3. **社交系统**: 好友请求/接受/拒绝/好友列表/用户搜索
+4. **Redis集成**: ioredis DB1/在线状态迁移/Token黑名单
+5. **Electron桌面版**: 无边框窗口/自定义标题栏/NSIS安装包
+6. **设计系统**: 三层毛玻璃/SVG噪点/微光气泡/动效曲线
+7. **文档体系**: 14篇文档覆盖全流程
 
-## 待完成
+## 待实现功能 (按优先级)
 
-- [ ] 阶段10: 本地完整功能测试 (前后端联调)
-- [ ] 阶段11: 线上部署
-- [ ] Redis 限流中间件集成 (rate-limit-redis)
-- [ ] 文件上传功能 (multer 已安装, API 未实现)
-- [ ] 群聊管理功能 (创建/踢人/转让)
+### P0 - 功能性Bug
+- **好友列表面板**: 导航栏"👥联系人"图标无点击事件 → 需实现侧边栏双视图切换
+- **从好友发起私聊**: 点击好友 → 创建/切换私聊房间
+
+### P1 - 视觉增强
+- **粒子动态特效**: Canvas 2D 深空粒子背景（设计文档已完成）
+- **消息发送动画**: 消息气泡出现时的微动效增强
+
+### P2 - 功能扩展
+- 文件上传 (multer 已安装, API 未实现)
+- 群聊管理 (数据库已支持)
+- Redis 限流中间件
+
+## 关键文件索引
+
+| 文件 | 说明 |
+|------|------|
+| `server/src/config/redis.ts` | Redis客户端单例 |
+| `server/src/services/presence.service.ts` | 在线状态(Redis) |
+| `server/src/services/token-blacklist.service.ts` | Token黑名单 |
+| `client/src/stores/chat.ts` | 聊天状态管理 |
+| `client/src/views/ChatView.vue` | 聊天主页面 |
+| `docs/05-粒子动态特效设计文档.md` | 粒子特效设计 |
+| `docs/06-好友列表与私聊功能设计文档.md` | 好友功能设计 |
+
+## 测试账号
+
+| 用户名 | 密码 |
+|--------|------|
+| alice | Test1234! |
+| bob | Test1234! |
+| charlie | Test1234! |
+| diana | Test1234! |
+
+## 注意事项
+
+1. pnpm 11.x 安装原生模块需先 `pnpm approve-builds`
+2. Prisma generate 需先停掉后端进程(EPERM)
+3. 后端 3000 端口被占时先 `taskkill /F /PID <pid>`
+4. 上层目录有冗余 `.git` 会导致 Git Graph 报错
