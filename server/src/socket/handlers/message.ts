@@ -1,14 +1,13 @@
 /**
  * Socket.IO 消息事件处理器
  * 处理实时消息发送、打字状态、已读回执
+ * 在线状态已迁移至 Redis（支持多进程/重启不丢失）
  */
 import { Server, Socket } from 'socket.io';
 import * as messageService from '../../services/message.service.js';
+import * as presenceService from '../../services/presence.service.js';
 import prisma from '../../config/database.js';
 import { logger } from '../../utils/logger.js';
-
-/** 在线用户映射：userId -> Set<socketId> */
-const onlineUsers = new Map<string, Set<string>>();
 
 /** 注册消息事件处理器 */
 export function registerMessageHandlers(io: Server, socket: Socket): void {
@@ -19,14 +18,11 @@ export function registerMessageHandlers(io: Server, socket: Socket): void {
   // ────────── 加入用户个人房间 ──────────
   socket.join(`user:${userId}`);
 
-  // 记录在线状态
-  if (!onlineUsers.has(userId)) {
-    onlineUsers.set(userId, new Set());
-  }
-  onlineUsers.get(userId)!.add(socket.id);
-
-  // 广播上线状态
-  updateUserPresence(io, userId, 'ONLINE');
+  // Redis 记录在线状态
+  presenceService.userOnline(userId, socket.id).then(() => {
+    // 广播上线状态
+    updateUserPresence(io, userId, 'ONLINE');
+  });
 
   // ────────── 加入所有会话房间 ──────────
   joinUserRooms(io, socket, userId);
@@ -93,19 +89,24 @@ export function registerMessageHandlers(io: Server, socket: Socket): void {
     }
   });
 
+  // ────────── 事件：更新在线状态 ──────────
+  socket.on('presence:update', async (data) => {
+    const { status } = data; // ONLINE / BUSY / AWAY
+    if (['ONLINE', 'BUSY', 'AWAY'].includes(status)) {
+      await presenceService.setUserStatus(userId, status);
+      await updateUserPresence(io, userId, status);
+    }
+  });
+
   // ────────── 断开连接 ──────────
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
     logger.info(`Socket disconnected: ${socket.id} (user: ${userId})`);
 
-    // 移除在线记录
-    const userSockets = onlineUsers.get(userId);
-    if (userSockets) {
-      userSockets.delete(socket.id);
-      if (userSockets.size === 0) {
-        onlineUsers.delete(userId);
-        // 所有连接断开，广播离线
-        updateUserPresence(io, userId, 'OFFLINE');
-      }
+    // Redis 移除在线记录
+    const isFullyOffline = await presenceService.userOffline(userId, socket.id);
+    if (isFullyOffline) {
+      // 所有连接断开，广播离线
+      await updateUserPresence(io, userId, 'OFFLINE');
     }
   });
 }
@@ -122,17 +123,12 @@ async function joinUserRooms(io: Server, socket: Socket, userId: string): Promis
 }
 
 /** 更新用户在线状态并广播 */
-async function updateUserPresence(io: Server, userId: string, status: 'ONLINE' | 'OFFLINE' | 'BUSY'): Promise<void> {
+async function updateUserPresence(io: Server, userId: string, status: 'ONLINE' | 'OFFLINE' | 'BUSY' | 'AWAY'): Promise<void> {
   await prisma.user.update({
     where: { id: userId },
     data: { status, lastSeenAt: new Date() },
   });
 
-  // 广播给所有在线用户（简化处理，后续可优化为只通知好友）
+  // 广播给所有在线用户
   io.emit('presence:update', { userId, status, lastSeenAt: new Date().toISOString() });
-}
-
-/** 导出在线用户列表（供其他模块使用） */
-export function getOnlineUsers(): Map<string, Set<string>> {
-  return onlineUsers;
 }

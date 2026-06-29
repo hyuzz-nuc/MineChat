@@ -8,6 +8,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { socketAuthMiddleware } from './socket/middleware/auth.js';
 import { registerMessageHandlers } from './socket/handlers/message.js';
 import indexRouter from './routes/index.js';
+import redis from './config/redis.js';
 
 /** 创建Express应用 */
 const app: Express = express();
@@ -59,10 +60,24 @@ io.on('connection', (socket) => {
 
 /* ────────────── 启动 ────────────── */
 
-httpServer.listen(config.port, () => {
-  logger.info(`🚀 MineChat server running on http://localhost:${config.port}`);
-  logger.info(`📡 Socket.IO ready on the same port`);
-  logger.info(`🔗 CORS origin: ${config.client.url}`);
-});
+async function startServer(): Promise<void> {
+  try {
+    // 连接 Redis
+    await redis.connect();
+    logger.info('🔴 Redis connected (DB1)');
+
+    // 启动 HTTP 服务
+    httpServer.listen(config.port, () => {
+      logger.info(`🚀 MineChat server running on http://localhost:${config.port}`);
+      logger.info(`📡 Socket.IO ready on the same port`);
+      logger.info(`🔗 CORS origin: ${config.client.url}`);
+    });
+  } catch (err: any) {
+    logger.error(`Server startup failed: ${err.message}`);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 export { app, io };
