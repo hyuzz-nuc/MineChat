@@ -40,6 +40,7 @@ enum UserStatus {
   ONLINE
   OFFLINE
   BUSY
+  AWAY
 }
 
 // ────────────── 房间表（私聊/群聊统一） ──────────────
