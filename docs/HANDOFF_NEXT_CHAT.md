@@ -1,48 +1,49 @@
-# MineChat Next Chat Handoff
-
-> 更新时间：2026-06-29
-
----
-
-## 新对话先执行
-
-```powershell
-cd E:\vibecoding\MineChat\MineChat\MineChat
-Get-Content AGENTS.md
-Get-Content PROJECT_MEMORY.md
-Get-Content docs\HANDOFF_NEXT_CHAT.md
-```
+# MineChat 交接文档
 
 ## 当前状态
 
-- 项目名称：MineChat
-- 当前阶段：阶段2 - 技术选型与架构搭建
-- 技术栈已确认：Vue3+Vite+TS / Express+TS+Prisma+PG / Socket.IO / Redis
-- 阶段1文档已全部输出：
-  - `docs/01-需求分析文档.md`
-  - `docs/02-UI_UX概念设计文档.md`
-  - `docs/03-项目总体规划文档.md`
-  - `docs/04-技术选型文档.md`
+**分支**: `DEV-1.0.0` (已合并到 main)
+**最新提交**: `1f361af` feat: 集成Redis(DB1) - 在线状态/Token黑名单/用户状态枚举扩展AWAY
+**远程仓库**: `git@github.com:hyuzz-nuc/MineChat.git`
 
-## 本轮重点
+## 已完成阶段
 
-- 阶段2：搭建前后端项目骨架
-- 前端：Vue3 + Vite5 + TypeScript + Pinia 初始化
-- 后端：Express + TypeScript + Prisma 初始化
-- 前端设计系统CSS实现（色彩/毛玻璃/动效变量）
-- 后端基础中间件（鉴权/日志/错误处理）
-- WebSocket基础通信（Socket.IO连接/心跳/重连）
-- 输出本地环境运行指南
+| 阶段 | 内容 | 状态 |
+|------|------|------|
+| 1 | 需求分析与UI/UX概念设计 | ✅ |
+| 2 | 技术选型与架构搭建 | ✅ |
+| 3 | 数据库设计 (Prisma + PostgreSQL) | ✅ |
+| 4 | 核心功能开发 (用户/消息/社交) | ✅ |
+| 5 | API接口文档 | ✅ |
+| 6 | UI细节打磨 (毛玻璃/噪点/微动效) | ✅ |
+| 7 | 本地联调与构建验证 | ✅ |
+| 8 | 部署方案文档 | ✅ |
+| 9 | Electron桌面版 + Redis集成 | ✅ |
 
-## 已知验证
+## 中间件状态
 
-- 技术选型文档已完成
-- 需求范围P0/P1/P2已分级
-- 视觉风格方向已确认（沉浸式暗色毛玻璃）
+| 组件 | 状态 | 说明 |
+|------|------|------|
+| PostgreSQL 18.4 | ✅ 运行中 | `minechat` 数据库, 用户: postgres, 密码: 123456 |
+| Redis | ✅ 运行中 | DB1 隔离 MineChat 数据 |
+| 后端 Express | ✅ 运行中 | http://localhost:3000 |
+| 前端 Vite | ⏳ 待启动 | http://localhost:5173 |
 
-## 不要做
+## Redis 集成详情
 
-- 不要跳过文档直接写功能代码
-- 不要引入第三方UI库
-- 不要用普通blur替代SVG扭曲质感毛玻璃
-- 不要同时推进多个阶段的任务
+- **配置**: `server/src/config/redis.ts` — ioredis 单例, DB1, 自动重连
+- **在线状态**: `server/src/services/presence.service.ts` — 替代内存 Map, 支持多进程
+- **Token黑名单**: `server/src/services/token-blacklist.service.ts` — 登出/改密码时吊销
+- **Key规范**:
+  - `presence:online` — SET, 在线用户集合
+  - `presence:{userId}:sockets` — SET, socketId 集合
+  - `presence:{userId}:status` — STRING, 用户状态
+  - `token:blacklist:{jti}` — STRING+TTL, 黑名单
+
+## 待完成
+
+- [ ] 阶段10: 本地完整功能测试 (前后端联调)
+- [ ] 阶段11: 线上部署
+- [ ] Redis 限流中间件集成 (rate-limit-redis)
+- [ ] 文件上传功能 (multer 已安装, API 未实现)
+- [ ] 群聊管理功能 (创建/踢人/转让)
