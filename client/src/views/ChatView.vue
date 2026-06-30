@@ -4,12 +4,14 @@ import { useUserStore } from '../stores/user';
 import { useChatStore, type ChatMessage } from '../stores/chat';
 import { useSocket, disconnectSocket } from '../composables/useSocket';
 import { useRouter } from 'vue-router';
+import ProfilePanel from '../components/ProfilePanel.vue';
 
 const router = useRouter();
 const userStore = useUserStore();
 const chatStore = useChatStore();
 const messageInput = ref('');
 const messagesContainer = ref<HTMLElement | null>(null);
+const showProfile = ref(false);
 let typingTimer: ReturnType<typeof setTimeout> | null = null;
 
 const myId = computed(() => userStore.userId);
@@ -85,7 +87,7 @@ onUnmounted(() => { chatStore.removeSocketListeners(); if (typingTimer) clearTim
       <div class="nav-icon" :class="{ active: chatStore.sidebarView === 'conversations' }" title="消息" @click="onNavClick('conversations')">💬</div>
       <div class="nav-icon" :class="{ active: chatStore.sidebarView === 'friends' }" title="联系人" @click="onNavClick('friends')">👥</div>
       <div class="nav-spacer"></div>
-      <div class="nav-avatar" @click="handleLogout" title="退出登录">{{ userStore.username?.charAt(0)?.toUpperCase() || '?' }}</div>
+      <div class="nav-avatar" @click="showProfile = !showProfile" title="个人中心">{{ userStore.username?.charAt(0)?.toUpperCase() || '?' }}</div>
     </nav>
 
     <aside class="chat-sidebar glass-sidebar">
@@ -179,6 +181,9 @@ onUnmounted(() => { chatStore.removeSocketListeners(); if (typingTimer) clearTim
         </div>
       </template>
     </aside>
+
+    <!-- 个人中心面板 -->
+    <ProfilePanel v-if="showProfile" @close="showProfile = false" />
 
     <main class="chat-main">
       <template v-if="hasActiveChat && chatStore.currentConversation">
