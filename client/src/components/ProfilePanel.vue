@@ -1,121 +1,208 @@
 <script setup lang="ts">
-/**
- * 个人中心侧面板
- * Discord式侧边弹出，展示+编辑个人信息
- */
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useUserStore } from '../stores/user';
-import { getProfileApi, updateProfileApi } from '../api/auth';
+import { getProfileApi, updateProfileApi, sendCodeApi, bindAccountApi, unbindAccountApi } from '../api/auth';
 import { useSocket } from '../composables/useSocket';
 
 const userStore = useUserStore();
-
-// 完整个人信息
-const profile = ref<{
-  uid: string;
-  username: string;
-  nickname: string;
-  avatar: string | null;
-  bio: string | null;
-  status: string;
-  createdAt: string;
-} | null>(null);
-
-// 编辑状态
+const profile = ref<any>(null);
 const editingNickname = ref(false);
 const editingBio = ref(false);
 const nicknameInput = ref('');
 const bioInput = ref('');
 const showStatusMenu = ref(false);
 const copyToast = ref(false);
+const showBindModal = ref(false);
+const bindType = ref<'email' | 'phone'>('email');
+const bindTarget = ref('');
+const bindCode = ref('');
+const bindCooldown = ref(0);
+const bindLoading = ref(false);
+const bindError = ref('');
+const bindSuccess = ref('');
+const isUnbindMode = ref(false);
+let cooldownTimer: ReturnType<typeof setInterval> | null = null;
 
-// 加载个人信息
 async function fetchProfile() {
   try {
-    const res: any = await getProfileApi();
-    profile.value = res.data;
-  } catch (err) {
-    console.error('获取个人信息失败:', err);
-  }
+    const r: any = await getProfileApi();
+    profile.value = r.data;
+  } catch (e) { console.error(e); }
 }
 
-// 保存昵称
 async function saveNickname() {
   if (!nicknameInput.value.trim()) return;
   try {
     await updateProfileApi({ nickname: nicknameInput.value.trim() });
     if (profile.value) profile.value.nickname = nicknameInput.value.trim();
     editingNickname.value = false;
-  } catch (err) {
-    console.error('更新昵称失败:', err);
-  }
+  } catch (e) { console.error(e); }
 }
 
-// 保存签名
 async function saveBio() {
   try {
     await updateProfileApi({ bio: bioInput.value.trim() || '' });
     if (profile.value) profile.value.bio = bioInput.value.trim();
     editingBio.value = false;
-  } catch (err) {
-    console.error('更新签名失败:', err);
-  }
+  } catch (e) { console.error(e); }
 }
 
-// 切换状态
-function setStatus(status: 'ONLINE' | 'OFFLINE' | 'BUSY' | 'AWAY') {
+function setStatus(s: 'ONLINE' | 'OFFLINE' | 'BUSY' | 'AWAY') {
   const socket = useSocket();
-  socket.emit('presence:update', { status });
-  if (profile.value) profile.value.status = status;
+  socket.emit('presence:update', { status: s });
+  if (profile.value) profile.value.status = s;
   showStatusMenu.value = false;
 }
 
-// 复制UID
 async function copyUid() {
   if (!profile.value) return;
   try {
     await navigator.clipboard.writeText(profile.value.uid);
     copyToast.value = true;
     setTimeout(() => { copyToast.value = false; }, 2000);
-  } catch {
-    // fallback
-  }
+  } catch { /* fallback */ }
 }
 
-// 格式化日期
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+function formatDate(d: string): string {
+  return new Date(d).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-// 状态文字映射
 const statusMap: Record<string, { label: string; emoji: string }> = {
   ONLINE: { label: '在线', emoji: '🟢' },
   OFFLINE: { label: '离线', emoji: '⚫' },
   BUSY: { label: '忙碌', emoji: '🔴' },
   AWAY: { label: '离开', emoji: '🟡' },
 };
+const currentStatus = computed(() => statusMap[profile.value?.status || 'OFFLINE'] || statusMap.OFFLINE);
 
-const currentStatus = computed(() => {
-  const s = profile.value?.status || 'OFFLINE';
-  return statusMap[s] || statusMap.OFFLINE;
-});
+/* ──── 绑定相关 ──── */
 
-// 点击外部关闭状态菜单
-function onClickOutside(e: MouseEvent) {
-  if (showStatusMenu.value) showStatusMenu.value = false;
+function startCooldown() {
+  bindCooldown.value = 60;
+  if (cooldownTimer) clearInterval(cooldownTimer);
+  cooldownTimer = setInterval(() => {
+    bindCooldown.value--;
+    if (bindCooldown.value <= 0 && cooldownTimer) {
+      clearInterval(cooldownTimer);
+      cooldownTimer = null;
+    }
+  }, 1000);
 }
 
+function openBindModal(type: 'email' | 'phone') {
+  bindType.value = type;
+  bindTarget.value = '';
+  bindCode.value = '';
+  bindCooldown.value = 0;
+  bindLoading.value = false;
+  bindError.value = '';
+  bindSuccess.value = '';
+  isUnbindMode.value = false;
+  showBindModal.value = true;
+}
+
+async function sendBindCode() {
+  bindError.value = '';
+  if (bindType.value === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bindTarget.value)) {
+    bindError.value = '邮箱格式不正确';
+    return;
+  }
+  if (bindType.value === 'phone' && !/^1[3-9]\d{9}$/.test(bindTarget.value)) {
+    bindError.value = '手机号格式不正确';
+    return;
+  }
+  try {
+    await sendCodeApi({ type: bindType.value, target: bindTarget.value, purpose: isUnbindMode.value ? 'unbind' : 'bind' });
+    startCooldown();
+  } catch (e: any) { bindError.value = e.message || '发送失败'; }
+}
+
+async function confirmBind() {
+  bindError.value = '';
+  if (!bindTarget.value.trim()) { bindError.value = '请输入邮箱或手机号'; return; }
+  if (!bindCode.value || bindCode.value.length !== 6) { bindError.value = '请输入6位验证码'; return; }
+  bindLoading.value = true;
+  try {
+    const r: any = await bindAccountApi({ type: bindType.value, target: bindTarget.value, code: bindCode.value });
+    if (profile.value) {
+      if (bindType.value === 'email') {
+        profile.value.email = r.data.email;
+        profile.value.emailVerified = r.data.emailVerified;
+      } else {
+        profile.value.phone = r.data.phone;
+        profile.value.phoneVerified = r.data.phoneVerified;
+      }
+    }
+    bindSuccess.value = '绑定成功！';
+    setTimeout(() => { showBindModal.value = false; }, 1500);
+  } catch (e: any) { bindError.value = e.message || '绑定失败'; }
+  finally { bindLoading.value = false; }
+}
+
+async function doUnbind(type: 'email' | 'phone') {
+  const t = type === 'email' ? profile.value?.email : profile.value?.phone;
+  if (!t) return;
+  try {
+    await sendCodeApi({ type, target: t, purpose: 'unbind' });
+    bindType.value = type;
+    bindTarget.value = t;
+    bindCode.value = '';
+    bindError.value = '';
+    bindSuccess.value = '';
+    bindLoading.value = false;
+    isUnbindMode.value = true;
+    showBindModal.value = true;
+    startCooldown();
+  } catch (e: any) {
+    bindError.value = e.message || '发送验证码失败';
+    showBindModal.value = true;
+  }
+}
+
+async function confirmUnbind() {
+  bindError.value = '';
+  if (!bindCode.value || bindCode.value.length !== 6) { bindError.value = '请输入6位验证码'; return; }
+  bindLoading.value = true;
+  try {
+    await unbindAccountApi({ type: bindType.value, code: bindCode.value });
+    if (profile.value) {
+      if (bindType.value === 'email') {
+        profile.value.email = '';
+        profile.value.emailVerified = false;
+      } else {
+        profile.value.phone = null;
+        profile.value.phoneVerified = false;
+      }
+    }
+    bindSuccess.value = '解绑成功！';
+    setTimeout(() => { showBindModal.value = false; isUnbindMode.value = false; }, 1500);
+  } catch (e: any) { bindError.value = e.message || '解绑失败'; }
+  finally { bindLoading.value = false; }
+}
+
+function handleSubmit() { isUnbindMode.value ? confirmUnbind() : confirmBind(); }
+
+function closeBindModal() {
+  showBindModal.value = false;
+  isUnbindMode.value = false;
+  if (cooldownTimer) { clearInterval(cooldownTimer); cooldownTimer = null; }
+  bindCooldown.value = 0;
+}
+
+function onClickOutside() { if (showStatusMenu.value) showStatusMenu.value = false; }
+
 onMounted(() => { fetchProfile(); document.addEventListener('click', onClickOutside); });
-onUnmounted(() => { document.removeEventListener('click', onClickOutside); });
+onUnmounted(() => {
+  document.removeEventListener('click', onClickOutside);
+  if (cooldownTimer) { clearInterval(cooldownTimer); cooldownTimer = null; }
+});
 
 const emit = defineEmits<{ close: [] }>();
 </script>
 
 <template>
   <div class="profile-panel glass-panel" @click.stop>
-    <!-- 关闭按钮 -->
     <button class="profile-close" @click="emit('close')">←</button>
-
     <div v-if="profile" class="profile-content">
       <!-- 头像 -->
       <div class="profile-avatar-wrap">
@@ -124,7 +211,6 @@ const emit = defineEmits<{ close: [] }>();
           <span v-else class="profile-avatar-text">{{ profile.nickname?.charAt(0)?.toUpperCase() || '?' }}</span>
         </div>
       </div>
-
       <!-- 昵称 -->
       <div class="profile-field">
         <div v-if="editingNickname" class="profile-edit-row">
@@ -137,17 +223,14 @@ const emit = defineEmits<{ close: [] }>();
           <button class="profile-edit-btn" @click="nicknameInput = profile.nickname; editingNickname = true">✏️</button>
         </div>
       </div>
-
       <!-- 用户名 -->
       <div class="profile-username">@{{ profile.username }}</div>
-
       <!-- UID -->
       <div class="profile-uid" @click="copyUid">
         <span class="uid-text">#{{ profile.uid }}</span>
         <span class="uid-copy">📋</span>
       </div>
       <div v-if="copyToast" class="copy-toast">UID已复制</div>
-
       <!-- 在线状态 -->
       <div class="profile-section">
         <div class="profile-section-title">状态</div>
@@ -162,11 +245,46 @@ const emit = defineEmits<{ close: [] }>();
           <div class="status-option" @click="setStatus('OFFLINE')">⚫ 离线</div>
         </div>
       </div>
-
+      <!-- 账号绑定 -->
+      <div class="profile-section">
+        <div class="profile-section-title">账号绑定</div>
+        <!-- 邮箱 -->
+        <div class="bind-item">
+          <div class="bind-info">
+            <span class="bind-icon">📧</span>
+            <span class="bind-label">邮箱</span>
+          </div>
+          <div v-if="profile.emailVerified" class="bind-status">
+            <span class="bind-value">{{ profile.email }}</span>
+            <span class="bind-verified">✅</span>
+            <button class="bind-action-btn" @click="doUnbind('email')">解绑</button>
+          </div>
+          <div v-else class="bind-status">
+            <span class="bind-unbound">未绑定</span>
+            <button class="bind-action-btn bind-btn-primary" @click="openBindModal('email')">绑定</button>
+          </div>
+        </div>
+        <!-- 手机 -->
+        <div class="bind-item">
+          <div class="bind-info">
+            <span class="bind-icon">📱</span>
+            <span class="bind-label">手机</span>
+          </div>
+          <div v-if="profile.phoneVerified" class="bind-status">
+            <span class="bind-value">{{ profile.phone }}</span>
+            <span class="bind-verified">✅</span>
+            <button class="bind-action-btn" @click="doUnbind('phone')">解绑</button>
+          </div>
+          <div v-else class="bind-status">
+            <span class="bind-unbound">未绑定</span>
+            <button class="bind-action-btn bind-btn-primary" @click="openBindModal('phone')">绑定</button>
+          </div>
+        </div>
+      </div>
       <!-- 个性签名 -->
       <div class="profile-section">
         <div class="profile-section-title">签名</div>
-        <div v-if="editingBio" class="profile-edit-row">
+        <div v-if="editingBio" class="profile-edit-col">
           <textarea v-model="bioInput" class="profile-textarea" maxlength="200" rows="3" @keydown.esc="editingBio = false"></textarea>
           <div class="profile-edit-actions">
             <button class="profile-save-btn" @click="saveBio">✓</button>
@@ -178,16 +296,50 @@ const emit = defineEmits<{ close: [] }>();
           <button class="profile-edit-btn" @click="bioInput = profile.bio || ''; editingBio = true">✏️</button>
         </div>
       </div>
-
       <!-- 注册时间 -->
       <div class="profile-section">
         <div class="profile-section-title">信息</div>
         <div class="profile-meta">📅 注册于 {{ formatDate(profile.createdAt) }}</div>
       </div>
-
       <!-- 退出登录 -->
       <div class="profile-section profile-logout">
         <button class="btn-logout" @click="userStore.clearLogin(); $router.push('/login')">退出登录</button>
+      </div>
+    </div>
+
+    <!-- 绑定/解绑弹窗 -->
+    <div v-if="showBindModal" class="bind-modal-overlay" @click.self="closeBindModal">
+      <div class="bind-modal glass-panel">
+        <div class="bind-modal-title">{{ isUnbindMode ? '解绑' : '绑定' }}{{ bindType === 'email' ? '邮箱' : '手机号' }}</div>
+        <!-- 目标输入（解绑模式只读） -->
+        <div v-if="!isUnbindMode" class="bind-field">
+          <label class="bind-field-label">{{ bindType === 'email' ? '邮箱地址' : '手机号' }}</label>
+          <input v-model="bindTarget" class="profile-input" :placeholder="bindType === 'email' ? 'example@email.com' : '13800138000'" />
+        </div>
+        <div v-else class="bind-field">
+          <label class="bind-field-label">{{ bindType === 'email' ? '邮箱地址' : '手机号' }}</label>
+          <div class="bind-target-display">{{ bindTarget }}</div>
+        </div>
+        <!-- 验证码 -->
+        <div class="bind-field">
+          <label class="bind-field-label">验证码</label>
+          <div class="code-row">
+            <input v-model="bindCode" class="profile-input code-input" maxlength="6" placeholder="6位验证码" />
+            <button class="send-code-btn" :disabled="bindCooldown > 0" @click="sendBindCode">
+              {{ bindCooldown > 0 ? `${bindCooldown}s` : '发送验证码' }}
+            </button>
+          </div>
+        </div>
+        <!-- 错误/成功提示 -->
+        <div v-if="bindError" class="bind-msg bind-error">{{ bindError }}</div>
+        <div v-if="bindSuccess" class="bind-msg bind-success">{{ bindSuccess }}</div>
+        <!-- 操作按钮 -->
+        <div class="bind-modal-actions">
+          <button class="profile-cancel-btn" @click="closeBindModal">取消</button>
+          <button class="profile-save-btn bind-confirm-btn" :disabled="bindLoading" @click="handleSubmit">
+            {{ bindLoading ? '处理中...' : isUnbindMode ? '确认解绑' : '确认绑定' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -256,6 +408,7 @@ const emit = defineEmits<{ close: [] }>();
 }
 .profile-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(var(--accent-rgb),.2); }
 .profile-edit-actions { display: flex; gap: 4px; margin-top: 4px; }
+.profile-edit-col { display: flex; flex-direction: column; gap: 4px; }
 
 .profile-save-btn {
   padding: 2px 8px; border-radius: var(--radius-sm); background: rgba(0,245,212,.15);
@@ -320,4 +473,66 @@ const emit = defineEmits<{ close: [] }>();
   cursor: pointer; transition: background var(--duration-fast);
 }
 .btn-logout:hover { background: rgba(255,71,87,.2); }
+
+/* ──── 账号绑定样式 ──── */
+.bind-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.bind-info { display: flex; align-items: center; gap: 6px; }
+.bind-icon { font-size: 14px; }
+.bind-label { font-size: var(--text-sm); color: var(--ink); }
+.bind-status { display: flex; align-items: center; gap: 6px; }
+.bind-value { font-size: 12px; color: var(--muted); max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+.bind-verified { font-size: 12px; }
+.bind-unbound { font-size: 12px; color: rgba(255,255,255,.3); }
+.bind-action-btn {
+  padding: 3px 10px; border-radius: var(--radius-sm); font-size: 12px; cursor: pointer;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+  color: var(--muted); transition: all var(--duration-fast);
+}
+.bind-action-btn:hover { background: rgba(255,255,255,.1); color: var(--ink); }
+.bind-btn-primary {
+  background: rgba(0,245,212,.1); color: var(--accent); border-color: rgba(0,245,212,.2);
+}
+.bind-btn-primary:hover { background: rgba(0,245,212,.2); }
+
+/* ──── 绑定弹窗 ──── */
+.bind-modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.bind-modal {
+  width: 340px; padding: var(--space-4); border-radius: var(--radius-lg);
+  display: flex; flex-direction: column; gap: var(--space-3);
+}
+.bind-modal-title {
+  font-size: var(--text-lg); font-weight: 700; color: var(--ink); text-align: center;
+}
+.bind-field { display: flex; flex-direction: column; gap: 4px; }
+.bind-field-label { font-size: 12px; color: var(--muted); }
+.bind-target-display {
+  padding: 6px 10px; border-radius: var(--radius-md);
+  background: rgba(255,255,255,.04); font-size: var(--text-sm); color: var(--muted);
+}
+.code-row { display: flex; gap: 8px; }
+.code-input { width: 140px; }
+.send-code-btn {
+  flex: 1; padding: 6px 10px; border-radius: var(--radius-md);
+  background: rgba(0,245,212,.1); color: var(--accent);
+  border: 1px solid rgba(0,245,212,.2); cursor: pointer;
+  font-size: var(--text-sm); transition: all var(--duration-fast);
+  white-space: nowrap;
+}
+.send-code-btn:hover:not(:disabled) { background: rgba(0,245,212,.2); }
+.send-code-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.bind-msg { font-size: 12px; text-align: center; padding: 4px 0; }
+.bind-error { color: #FF4757; }
+.bind-success { color: var(--accent); }
+
+.bind-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.bind-confirm-btn { padding: 4px 16px; font-size: 13px; }
+.bind-confirm-btn:disabled { opacity: .5; cursor: not-allowed; }
 </style>

@@ -22,4 +22,16 @@ export const config = {
     dir: process.env.UPLOAD_DIR || 'uploads',
     maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880', 10),
   },
+  smtp: {
+    host: process.env.SMTP_HOST || 'smtp.qq.com',
+    port: parseInt(process.env.SMTP_PORT || '465', 10),
+    secure: process.env.SMTP_SECURE === 'true',
+    user: process.env.SMTP_USER || '',
+    pass: process.env.SMTP_PASS || '',
+    from: process.env.SMTP_FROM || 'MineChat <noreply@minechat.dev>',
+  },
+  sms: {
+    mock: process.env.SMS_MOCK !== 'false', // 默认模拟模式
+    mockCode: process.env.SMS_MOCK_CODE || '888888',
+  },
 };
