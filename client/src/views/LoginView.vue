@@ -37,6 +37,7 @@ async function handleLogin() {
       accessToken: res.data.accessToken,
       refreshToken: res.data.refreshToken,
       userId: res.data.user.id,
+      uid: res.data.user.uid,
       username: res.data.user.username,
       avatar: res.data.user.avatar || '',
     });

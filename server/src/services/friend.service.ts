@@ -44,8 +44,8 @@ export async function sendFriendRequest(requesterId: string, addresseeId: string
   const friendship = await prisma.friendship.create({
     data: { requesterId, addresseeId, status: 'PENDING' },
     include: {
-      requester: { select: { id: true, username: true, nickname: true, avatar: true } },
-      addressee: { select: { id: true, username: true, nickname: true, avatar: true } },
+      requester: { select: { id: true, uid: true, username: true, nickname: true, avatar: true } },
+      addressee: { select: { id: true, uid: true, username: true, nickname: true, avatar: true } },
     },
   });
 
@@ -72,8 +72,8 @@ export async function acceptFriendRequest(userId: string, friendshipId: string) 
     where: { id: friendshipId },
     data: { status: 'ACCEPTED' },
     include: {
-      requester: { select: { id: true, username: true, nickname: true, avatar: true } },
-      addressee: { select: { id: true, username: true, nickname: true, avatar: true } },
+      requester: { select: { id: true, uid: true, username: true, nickname: true, avatar: true } },
+      addressee: { select: { id: true, uid: true, username: true, nickname: true, avatar: true } },
     },
   });
 
@@ -111,8 +111,8 @@ export async function getFriendList(userId: string) {
       status: 'ACCEPTED',
     },
     include: {
-      requester: { select: { id: true, username: true, nickname: true, avatar: true, status: true } },
-      addressee: { select: { id: true, username: true, nickname: true, avatar: true, status: true } },
+      requester: { select: { id: true, uid: true, username: true, nickname: true, avatar: true, status: true } },
+      addressee: { select: { id: true, uid: true, username: true, nickname: true, avatar: true, status: true } },
     },
   });
 
@@ -133,7 +133,7 @@ export async function getPendingRequests(userId: string) {
   const requests = await prisma.friendship.findMany({
     where: { addresseeId: userId, status: 'PENDING' },
     include: {
-      requester: { select: { id: true, username: true, nickname: true, avatar: true } },
+      requester: { select: { id: true, uid: true, username: true, nickname: true, avatar: true } },
     },
     orderBy: { createdAt: 'desc' },
   });

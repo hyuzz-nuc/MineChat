@@ -30,6 +30,7 @@ async function main() {
     prisma.user.create({
       data: {
         username: 'alice',
+        uid: '100001',
         email: 'alice@minechat.dev',
         passwordHash,
         nickname: '爱丽丝',
@@ -41,6 +42,7 @@ async function main() {
     prisma.user.create({
       data: {
         username: 'bob',
+        uid: '100002',
         email: 'bob@minechat.dev',
         passwordHash,
         nickname: '鲍勃',
@@ -52,6 +54,7 @@ async function main() {
     prisma.user.create({
       data: {
         username: 'charlie',
+        uid: '100003',
         email: 'charlie@minechat.dev',
         passwordHash,
         nickname: '查理',
@@ -63,6 +66,7 @@ async function main() {
     prisma.user.create({
       data: {
         username: 'diana',
+        uid: '100004',
         email: 'diana@minechat.dev',
         passwordHash,
         nickname: '戴安娜',

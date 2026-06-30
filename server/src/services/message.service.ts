@@ -31,8 +31,7 @@ export async function sendMessage(
       replyTo,
     },
     include: {
-      sender: {
-        select: { id: true, username: true, nickname: true, avatar: true },
+      sender: { select: { id: true, uid: true, username: true, nickname: true, avatar: true },
       },
     },
   });
@@ -68,8 +67,7 @@ export async function getRoomMessages(
       ...(cursor ? { createdAt: { lt: (await prisma.message.findUnique({ where: { id: cursor } }))?.createdAt } } : {}),
     },
     include: {
-      sender: {
-        select: { id: true, username: true, nickname: true, avatar: true },
+      sender: { select: { id: true, uid: true, username: true, nickname: true, avatar: true },
       },
     },
     orderBy: { createdAt: 'desc' },
@@ -116,8 +114,7 @@ export async function getConversations(userId: string) {
         include: {
           members: {
             include: {
-              user: {
-                select: { id: true, username: true, nickname: true, avatar: true, status: true },
+              user: { select: { id: true, uid: true, username: true, nickname: true, avatar: true, status: true },
               },
             },
           },
@@ -125,8 +122,7 @@ export async function getConversations(userId: string) {
             orderBy: { createdAt: 'desc' },
             take: 1,
             include: {
-              sender: {
-                select: { id: true, username: true, nickname: true, avatar: true },
+              sender: { select: { id: true, uid: true, username: true, nickname: true, avatar: true },
               },
             },
           },
@@ -219,8 +215,7 @@ export async function createDirectRoom(userId: string, targetUserId: string) {
     include: {
       members: {
         include: {
-          user: {
-            select: { id: true, username: true, nickname: true, avatar: true, status: true },
+          user: { select: { id: true, uid: true, username: true, nickname: true, avatar: true, status: true },
           },
         },
       },
@@ -245,8 +240,7 @@ export async function createDirectRoom(userId: string, targetUserId: string) {
     include: {
       members: {
         include: {
-          user: {
-            select: { id: true, username: true, nickname: true, avatar: true, status: true },
+          user: { select: { id: true, uid: true, username: true, nickname: true, avatar: true, status: true },
           },
         },
       },

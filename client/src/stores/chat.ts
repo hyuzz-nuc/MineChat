@@ -5,13 +5,15 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { getConversationsApi, getRoomMessagesApi, markReadApi, createDirectRoomApi } from '../api/message';
-import { getFriendListApi, getPendingRequestsApi, acceptFriendRequestApi, rejectFriendRequestApi } from '../api/friend';
+import { getFriendListApi, getPendingRequestsApi, acceptFriendRequestApi, rejectFriendRequestApi, sendFriendRequestApi } from '../api/friend';
+import { searchUsersApi } from '../api/auth';
 import { useSocket } from '../composables/useSocket';
 
 /** 好友项类型 */
 export interface Friend {
   friendshipId: string;
   userId: string;
+  uid: string;
   username: string;
   nickname: string;
   avatar: string | null;
@@ -319,6 +321,35 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  /** 搜索用户（支持UID精确搜索+用户名模糊搜索） */
+  const searchResults = ref<Array<{ id: string; uid: string; username: string; nickname: string; avatar: string | null; status: string }>>([]);
+  const searching = ref(false);
+
+  async function searchUsers(keyword: string) {
+    if (!keyword.trim()) { searchResults.value = []; return; }
+    searching.value = true;
+    try {
+      const res: any = await searchUsersApi(keyword.trim());
+      searchResults.value = res.data;
+    } catch (err) {
+      console.error('搜索用户失败:', err);
+    } finally {
+      searching.value = false;
+    }
+  }
+
+  /** 发送好友请求 */
+  async function sendFriendRequest(targetUserId: string) {
+    try {
+      await sendFriendRequestApi(targetUserId);
+      // 从搜索结果移除
+      searchResults.value = searchResults.value.filter(u => u.id !== targetUserId);
+    } catch (err) {
+      console.error('发送好友请求失败:', err);
+      throw err;
+    }
+  }
+
   return {
     conversations,
     currentRoomId,
@@ -339,6 +370,10 @@ export const useChatStore = defineStore('chat', () => {
     acceptRequest,
     rejectRequest,
     startChatWithFriend,
+    searchResults,
+    searching,
+    searchUsers,
+    sendFriendRequest,
     // 基础功能
     fetchConversations,
     selectConversation,

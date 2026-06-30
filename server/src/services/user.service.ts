@@ -10,6 +10,16 @@ import { logger } from '../utils/logger.js';
 
 const SALT_ROUNDS = 12;
 
+/** 生成6位数字UID（碰撞时重试） */
+async function generateUid(): Promise<string> {
+  for (let i = 0; i < 10; i++) {
+    const uid = String(100000 + Math.floor(Math.random() * 900000));
+    const exists = await prisma.user.findUnique({ where: { uid } });
+    if (!exists) return uid;
+  }
+  throw new AppError(500, 'UID生成失败，请重试', 50001);
+}
+
 /** 注册 */
 export async function register(data: {
   username: string;
@@ -31,9 +41,13 @@ export async function register(data: {
   // 加密密码
   const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
 
+  // 生成6位数字UID
+  const uid = await generateUid();
+
   // 创建用户
   const user = await prisma.user.create({
     data: {
+      uid,
       username: data.username,
       email: data.email,
       passwordHash,
@@ -41,6 +55,7 @@ export async function register(data: {
     },
     select: {
       id: true,
+      uid: true,
       username: true,
       email: true,
       nickname: true,
@@ -88,6 +103,7 @@ export async function login(account: string, password: string) {
   return {
     user: {
       id: user.id,
+      uid: user.uid,
       username: user.username,
       email: user.email,
       nickname: user.nickname,
@@ -129,6 +145,7 @@ export async function getUserProfile(userId: string) {
     where: { id: userId },
     select: {
       id: true,
+      uid: true,
       username: true,
       email: true,
       nickname: true,
@@ -155,6 +172,7 @@ export async function updateUserProfile(
     data,
     select: {
       id: true,
+      uid: true,
       username: true,
       nickname: true,
       avatar: true,
@@ -165,8 +183,28 @@ export async function updateUserProfile(
   return user;
 }
 
-/** 搜索用户（按用户名模糊匹配） */
+/** 搜索用户（支持UID精确搜索 + 用户名模糊匹配） */
 export async function searchUsers(keyword: string, currentUserId: string) {
+  // 如果是纯数字且6位，优先按UID精确搜索
+  const isUidSearch = /^\d{6}$/.test(keyword);
+  
+  if (isUidSearch) {
+    const user = await prisma.user.findUnique({
+      where: { uid: keyword },
+      select: {
+        id: true,
+        uid: true,
+        username: true,
+        nickname: true,
+        avatar: true,
+        status: true,
+      },
+    });
+    if (user && user.id !== currentUserId) return [user];
+    return [];
+  }
+
+  // 用户名模糊匹配
   const users = await prisma.user.findMany({
     where: {
       username: { contains: keyword, mode: 'insensitive' },
@@ -174,6 +212,7 @@ export async function searchUsers(keyword: string, currentUserId: string) {
     },
     select: {
       id: true,
+      uid: true,
       username: true,
       nickname: true,
       avatar: true,

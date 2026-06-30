@@ -6,6 +6,7 @@ export const useUserStore = defineStore('user', () => {
   const token = ref(localStorage.getItem('minechat_access_token') || '');
   const refreshToken = ref(localStorage.getItem('minechat_refresh_token') || '');
   const userId = ref('');
+  const uid = ref('');
   const username = ref('');
   const avatar = ref('');
   const status = ref<'online' | 'offline' | 'busy'>('online');
@@ -17,12 +18,14 @@ export const useUserStore = defineStore('user', () => {
     accessToken: string;
     refreshToken: string;
     userId: string;
+    uid: string;
     username: string;
     avatar?: string;
   }) {
     token.value = data.accessToken;
     refreshToken.value = data.refreshToken;
     userId.value = data.userId;
+    uid.value = data.uid;
     username.value = data.username;
     avatar.value = data.avatar || '';
     localStorage.setItem('minechat_access_token', data.accessToken);
@@ -34,6 +37,7 @@ export const useUserStore = defineStore('user', () => {
     token.value = '';
     refreshToken.value = '';
     userId.value = '';
+    uid.value = '';
     username.value = '';
     avatar.value = '';
     localStorage.removeItem('minechat_access_token');
@@ -44,6 +48,7 @@ export const useUserStore = defineStore('user', () => {
     token,
     refreshToken,
     userId,
+    uid,
     username,
     avatar,
     status,

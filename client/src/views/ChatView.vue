@@ -57,6 +57,21 @@ async function onFriendClick(userId: string) { try { await chatStore.startChatWi
 function onAcceptRequest(id: string) { chatStore.acceptRequest(id); }
 function onRejectRequest(id: string) { chatStore.rejectRequest(id); }
 
+/** 搜索用户 */
+const friendSearchKeyword = ref('');
+let searchDebounce: ReturnType<typeof setTimeout> | null = null;
+function onFriendSearchInput() {
+  if (searchDebounce) clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(() => {
+    chatStore.searchUsers(friendSearchKeyword.value);
+  }, 400);
+}
+
+/** 添加好友 */
+async function onAddFriend(userId: string) {
+  try { await chatStore.sendFriendRequest(userId); } catch { /* handled */ }
+}
+
 watch(() => chatStore.currentMessages.length, () => scrollToBottom());
 
 onMounted(async () => { await chatStore.fetchConversations(); chatStore.registerSocketListeners(); });
@@ -109,6 +124,28 @@ onUnmounted(() => { chatStore.removeSocketListeners(); if (typingTimer) clearTim
           <span>好友</span>
           <span v-if="chatStore.pendingRequests.length > 0" class="friend-request-badge">{{ chatStore.pendingRequests.length }}</span>
         </div>
+        <!-- 搜索用户（支持UID/用户名） -->
+        <div class="sidebar-search">
+          <input v-model="friendSearchKeyword" type="text" placeholder="输入UID或用户名搜索..." class="sidebar-search-input" @input="onFriendSearchInput" />
+        </div>
+        <!-- 搜索结果 -->
+        <div v-if="chatStore.searchResults.length > 0" class="search-results">
+          <div class="friend-section-label">搜索结果</div>
+          <div v-for="user in chatStore.searchResults" :key="user.id" class="conv-item">
+            <div class="conv-avatar">
+              <img v-if="user.avatar" :src="user.avatar" alt="" />
+              <span v-else class="conv-avatar-text">{{ user.nickname?.charAt(0) || '?' }}</span>
+              <span v-if="user.status === 'ONLINE'" class="conv-online-dot"></span>
+            </div>
+            <div class="conv-info">
+              <div class="conv-top">
+                <span class="conv-name">{{ user.nickname || user.username }}</span>
+                <span class="user-uid">#{{ user.uid }}</span>
+              </div>
+              <button class="btn-add-friend" @click="onAddFriend(user.id)">添加好友</button>
+            </div>
+          </div>
+        </div>
         <div v-if="chatStore.pendingRequests.length > 0" class="friend-requests">
           <div class="friend-section-label">好友请求</div>
           <div v-for="req in chatStore.pendingRequests" :key="req.id" class="friend-request-item">
@@ -135,7 +172,7 @@ onUnmounted(() => { chatStore.removeSocketListeners(); if (typingTimer) clearTim
             <div class="conv-info">
               <div class="conv-top">
                 <span class="conv-name">{{ friend.nickname || friend.username }}</span>
-                <span class="friend-status" :class="friend.status?.toLowerCase()">{{ friend.status === 'ONLINE' ? '在线' : '离线' }}</span>
+                <span class="user-uid">#{{ friend.uid || '' }}</span>
               </div>
             </div>
           </div>
@@ -217,6 +254,10 @@ onUnmounted(() => { chatStore.removeSocketListeners(); if (typingTimer) clearTim
 .btn-reject:hover { background: rgba(255,71,87,.2); }
 .friend-status { font-size: 11px; color: var(--muted); }
 .friend-status.online { color: var(--accent); }
+.user-uid { font-size: 11px; color: var(--accent); opacity: .7; font-family: monospace; }
+.btn-add-friend { margin-top: 4px; padding: 2px 12px; border-radius: var(--radius-md); background: rgba(0,245,212,.12); color: var(--accent); border: 1px solid rgba(0,245,212,.25); font-size: 12px; cursor: pointer; transition: background var(--duration-fast) var(--ease-out-expo); }
+.btn-add-friend:hover { background: rgba(0,245,212,.22); }
+.search-results { margin-bottom: var(--space-2); }
 
 .conv-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-lg); cursor: pointer; transition: background var(--duration-fast) var(--ease-out-expo); }
 .conv-item:hover { background: rgba(255,255,255,.04); }
