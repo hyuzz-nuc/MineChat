@@ -87,7 +87,7 @@ export class SplashEngine {
     // 光束线条
     this.streaks = [];
     const streakCount = rm ? 4 : 10;
-    const colors = ['rgba(244,210,138,', 'rgba(201,168,76,', 'rgba(0,245,212,', 'rgba(232,180,184,'];
+    const colors = ['rgba(244,210,138,', 'rgba(201,168,76,', 'rgba(212,175,55,', 'rgba(232,180,184,'];
     for (let s = 0; s < streakCount; s++) {
       this.streaks.push({
         x: Math.random() * w, y: h * (0.20 + Math.random() * 0.62),
@@ -102,7 +102,7 @@ export class SplashEngine {
     // 碎片
     this.shards = [];
     const shardCount = rm ? 6 : 16;
-    const shardColors = ['rgba(244,210,138,', 'rgba(201,168,76,', 'rgba(0,245,212,', 'rgba(232,180,184,'];
+    const shardColors = ['rgba(244,210,138,', 'rgba(201,168,76,', 'rgba(212,175,55,', 'rgba(232,180,184,'];
     for (let h2 = 0; h2 < shardCount; h2++) {
       this.shards.push({
         ox: (Math.random() - 0.5) * w * 0.92, oy: (Math.random() - 0.5) * h * 0.22,
@@ -192,12 +192,12 @@ export class SplashEngine {
 
       // 信号线
       const slitGrad = ctx.createLinearGradient(left, centerY, right, centerY);
-      slitGrad.addColorStop(0, 'rgba(0,245,212,0)');
-      slitGrad.addColorStop(0.3, `rgba(0,245,212,${(0.48 * coreAlpha).toFixed(3)})`);
+      slitGrad.addColorStop(0, 'rgba(212,175,55,0)');
+      slitGrad.addColorStop(0.3, `rgba(212,175,55,${(0.48 * coreAlpha).toFixed(3)})`);
       slitGrad.addColorStop(0.5, `rgba(244,210,138,${(0.68 * coreAlpha).toFixed(3)})`);
-      slitGrad.addColorStop(0.7, `rgba(0,245,212,${(0.48 * coreAlpha).toFixed(3)})`);
-      slitGrad.addColorStop(1, 'rgba(0,245,212,0)');
-      ctx.shadowColor = `rgba(0,245,212,${(0.48 * exitFade).toFixed(3)})`;
+      slitGrad.addColorStop(0.7, `rgba(212,175,55,${(0.48 * coreAlpha).toFixed(3)})`);
+      slitGrad.addColorStop(1, 'rgba(212,175,55,0)');
+      ctx.shadowColor = `rgba(212,175,55,${(0.48 * exitFade).toFixed(3)})`;
       ctx.shadowBlur = 42 + lineT * 42; ctx.lineCap = 'round';
       ctx.strokeStyle = slitGrad; ctx.lineWidth = 1.4 + lineT * 2.2;
       ctx.beginPath(); ctx.moveTo(left, centerY); ctx.lineTo(right, centerY); ctx.stroke();

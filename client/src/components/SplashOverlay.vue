@@ -1,11 +1,13 @@
 <script setup lang="ts">
 /**
- * 开机动画叠加层 V2
- * 鎏金色彩 + 左右飞入弹性回弹 + shimmer波纹
+ * 开机动画叠加层 V3
+ * 黑白灰金金属质感 + 多层金属渐变品牌文字 + 路由跳转修复
  */
 import { ref, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { SplashEngine } from '../composables/splashEngine';
 
+const router = useRouter();
 const show = ref(true);
 const ready = ref(false);
 const exiting = ref(false);
@@ -20,6 +22,11 @@ function dismiss() {
   setTimeout(() => {
     show.value = false;
     if (engine) { engine.destroy(); engine = null; }
+    // 修复：splash消失后导航到登录页（未登录时）
+    const token = localStorage.getItem('minechat_access_token');
+    if (!token) {
+      router.push('/login');
+    }
   }, 1200);
 }
 
@@ -131,44 +138,61 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
-/* "Mine" — 暗金色，从左侧飞入+弹性回弹 */
+/* "Mine" — 多层金属渐变（暗铜→古金→金属金→白金高光→金属金→古金→暗铜） */
 .splash-word-mine {
   display: inline-block; white-space: nowrap;
   will-change: opacity, transform, letter-spacing;
-  color: #C9A84C;
-  text-shadow:
-    0 0 22px rgba(201,168,76,.35),
-    0 22px 72px rgba(0,0,0,.58),
-    -2px 0 0 rgba(0,245,212,.22),
-    2px 0 0 rgba(244,210,138,.18);
+  background: linear-gradient(135deg,
+    #8B7355 0%,
+    #C9A84C 18%,
+    #D4AF37 30%,
+    #F5E6B8 42%,
+    #FFF8E1 50%,
+    #F5E6B8 58%,
+    #D4AF37 70%,
+    #C9A84C 82%,
+    #8B7355 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 22px 72px rgba(0,0,0,.58))
+         drop-shadow(-2px 0 0 rgba(139,115,85,.22))
+         drop-shadow(2px 0 0 rgba(212,175,55,.18));
   opacity: 0;
-  animation: splash-mine-in 800ms cubic-bezier(.22,1,.36,1) 2.0s forwards;
+  animation: splash-mine-in 800ms cubic-bezier(.22,1,.36,1) 2.0s forwards,
+             splash-metal-flow 4s ease-in-out 2.8s infinite alternate;
 }
 
-/* "Chat" — 鎏金渐变色，从右侧飞入+弹性回弹 */
+/* "Chat" — 银白金属渐变（暗银→银灰→亮银→纯白高光→亮银→银灰→暗银） */
 .splash-word-chat {
   display: inline-block; white-space: nowrap; margin-left: 0.06em;
   will-change: opacity, transform, letter-spacing;
-  background: linear-gradient(100deg,
-    rgba(255,255,255,.04) 0%,
-    #FFF8E1 22%,
-    #F4D28A 42%,
-    #C9A84C 58%,
-    #00F5D4 78%,
-    rgba(255,255,255,.72) 100%
+  background: linear-gradient(135deg,
+    #6B7280 0%,
+    #9CA3AF 18%,
+    #D1D5DB 30%,
+    #F9FAFB 42%,
+    #FFFFFF 50%,
+    #F9FAFB 58%,
+    #D1D5DB 70%,
+    #9CA3AF 82%,
+    #6B7280 100%
   );
-  background-size: 300% 100%;
+  background-size: 200% 100%;
   -webkit-background-clip: text; background-clip: text;
   color: transparent; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 22px 72px rgba(0,0,0,.58))
+         drop-shadow(0 0 12px rgba(212,175,55,.15));
   opacity: 0;
   animation: splash-chat-in 800ms cubic-bezier(.22,1,.36,1) 2.5s forwards,
-             splash-chat-gradient 3s ease-in-out 3.3s infinite alternate;
+             splash-metal-flow 4s ease-in-out 3.3s infinite alternate;
 }
 
 .splash-signal-line {
   position: relative;
   width: min(460px, 54vw); height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(201,168,76,.22), rgba(255,255,255,.78), rgba(244,210,138,.66), rgba(0,245,212,.22), transparent);
+  background: linear-gradient(90deg, transparent, rgba(139,115,85,.22), rgba(255,255,255,.78), rgba(212,175,55,.66), rgba(139,115,85,.22), transparent);
   opacity: 0; transform: scaleX(.12);
   box-shadow: 0 0 18px rgba(244,210,138,.24), 0 0 34px rgba(201,168,76,.10);
   animation: splash-signal-line 4200ms cubic-bezier(.22,1,.36,1) forwards;
@@ -192,7 +216,7 @@ onUnmounted(() => {
   margin-top: 8px; font-size: 11px; font-weight: 700; letter-spacing: .24em;
   color: rgba(244,210,138,.62); text-transform: uppercase;
   opacity: 0; transform: translateY(10px);
-  text-shadow: 0 0 18px rgba(201,168,76,.24), 0 0 34px rgba(0,245,212,.12);
+  text-shadow: 0 0 18px rgba(201,168,76,.24), 0 0 34px rgba(212,175,55,.12);
   transition: opacity 620ms cubic-bezier(.22,1,.36,1), transform 620ms cubic-bezier(.22,1,.36,1);
   animation: splash-enter-pulse 1800ms ease-in-out infinite alternate;
 }
@@ -223,7 +247,7 @@ onUnmounted(() => {
 }
 
 /* 鎏金渐变流动 */
-@keyframes splash-chat-gradient {
+@keyframes splash-metal-flow {
   0% { background-position: 0% 50% }
   100% { background-position: 100% 50% }
 }
@@ -257,7 +281,7 @@ onUnmounted(() => {
 }
 
 @keyframes splash-enter-pulse {
-  0% { opacity: .46; text-shadow: 0 0 14px rgba(201,168,76,.16), 0 0 26px rgba(0,245,212,.08) }
-  100% { opacity: .78; text-shadow: 0 0 22px rgba(244,210,138,.30), 0 0 42px rgba(0,245,212,.16) }
+  0% { opacity: .46; text-shadow: 0 0 14px rgba(201,168,76,.16), 0 0 26px rgba(212,175,55,.08) }
+  100% { opacity: .78; text-shadow: 0 0 22px rgba(244,210,138,.30), 0 0 42px rgba(212,175,55,.16) }
 }
 </style>

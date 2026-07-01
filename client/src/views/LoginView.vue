@@ -54,6 +54,8 @@ async function handleLogin() {
 
 <template>
   <div class="login-page">
+    <!-- 星系旋涡CSS层 -->
+    <div class="galaxy-vortex"></div>
     <div class="login-card glass-panel">
       <h1 class="login-title">MineChat</h1>
       <div class="login-signal-line"></div>
@@ -103,10 +105,37 @@ async function handleLogin() {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
   background:
-    radial-gradient(ellipse at 20% 50%, rgba(0, 245, 212, .02) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(115, 167, 255, .015) 0%, transparent 50%),
+    radial-gradient(ellipse at 20% 50%, rgba(212, 175, 55, .02) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(139, 157, 175, .015) 0%, transparent 50%),
     linear-gradient(180deg, var(--bg-base) 0%, var(--bg-paper) 100%);
+}
+
+/* 星系旋涡 — CSS缓慢旋转螺旋光晕 */
+.galaxy-vortex {
+  position: absolute;
+  top: 40%; left: 50%;
+  width: min(60vw, 60vh);
+  height: min(60vw, 60vh);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(139,115,85,.04) 0%,
+    rgba(212,175,55,.02) 30%,
+    rgba(201,168,76,.01) 60%,
+    transparent 100%
+  );
+  animation: galaxy-rotate 60s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes galaxy-rotate {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
 .login-card {
@@ -117,26 +146,34 @@ async function handleLogin() {
   flex-direction: column;
   align-items: center;
   gap: var(--space-5);
+  position: relative;
+  z-index: 10;
 }
 
 .login-title {
   font-size: var(--text-2xl);
   font-weight: var(--weight-bold);
   letter-spacing: -.02em;
-  background: linear-gradient(94deg, #fff 26%, rgba(0, 245, 212, .98) 68%, rgba(255, 255, 255, .82));
-  background-size: 300% 100%;
+  background: linear-gradient(135deg, #8B7355 0%, #C9A84C 20%, #D4AF37 35%, #F5E6B8 50%, #D4AF37 65%, #C9A84C 80%, #8B7355 100%);
+  background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
+  animation: login-metal-flow 4s ease-in-out infinite alternate;
+}
+
+@keyframes login-metal-flow {
+  0% { background-position: 0% 50% }
+  100% { background-position: 100% 50% }
 }
 
 .login-signal-line {
   width: 60%;
   height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(0, 245, 212, .22), rgba(255, 255, 255, .78), rgba(0, 245, 212, .22), transparent);
+  background: linear-gradient(90deg, transparent, rgba(139,115,85,.22), rgba(255,255,255,.78), rgba(212,175,55,.66), rgba(139,115,85,.22), transparent);
   border-radius: 999px;
-  box-shadow: 0 0 18px rgba(0, 245, 212, .24);
+  box-shadow: 0 0 18px rgba(212,175,55,.24);
 }
 
 .login-error {
@@ -193,9 +230,9 @@ async function handleLogin() {
   width: 100%;
   height: 48px;
   border-radius: var(--radius-lg);
-  background: rgba(0, 245, 212, .12);
-  border: 1px solid rgba(0, 245, 212, .34);
-  color: var(--accent);
+  background: linear-gradient(135deg, #C9A84C, #D4AF37, #C9A84C);
+  border: 1px solid rgba(212,175,55,.34);
+  color: #08090B;
   font-size: var(--text-md);
   font-weight: var(--weight-bold);
   letter-spacing: .2em;
@@ -204,13 +241,14 @@ async function handleLogin() {
               border-color var(--duration-fast) var(--ease-out-expo),
               transform var(--duration-fast) var(--ease-out-expo),
               box-shadow var(--duration-fast) var(--ease-out-expo);
+  box-shadow: 0 4px 16px rgba(212,175,55,.3);
 }
 
 .login-btn:hover:not(:disabled) {
-  background: rgba(0, 245, 212, .20);
-  border-color: rgba(0, 245, 212, .58);
+  background: linear-gradient(135deg, #D4AF37, #F5E6B8, #D4AF37);
+  border-color: rgba(212,175,55,.58);
   transform: translateY(-1px);
-  box-shadow: 0 16px 42px rgba(0, 0, 0, .30), 0 0 22px rgba(0, 245, 212, .06), inset 0 1px 0 rgba(255, 255, 255, .10);
+  box-shadow: 0 16px 42px rgba(0,0,0,.30), 0 0 22px rgba(212,175,55,.06), inset 0 1px 0 rgba(255,255,255,.10);
 }
 
 .login-btn:disabled {

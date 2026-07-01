@@ -20,6 +20,19 @@ interface Particle {
   seed: number;
 }
 
+/** 流星 */
+interface Meteor {
+  x: number;        // 起始x (px)
+  y: number;        // 起始y (px)
+  angle: number;    // 弧度
+  speed: number;    // px/s
+  length: number;   // 尾迹长度(px)
+  life: number;     // 剩余生命(0~1)
+  maxLife: number;  // 总生命(s)
+  elapsed: number;  // 已过时间(s)
+  width: number;    // 头部宽度
+}
+
 /** 鼠标状态 */
 interface MouseState {
   x: number;
@@ -37,6 +50,12 @@ export interface ParticleConfig {
   linkDistance?: number;
   /** 呼吸脉冲数量 */
   pulseCount?: number;
+  /** 流星最大同时存在数 */
+  meteorCount?: number;
+  /** 流星出现间隔下限(ms) */
+  meteorIntervalMin?: number;
+  /** 流星出现间隔上限(ms) */
+  meteorIntervalMax?: number;
   /** 目标帧率 */
   targetFps?: number;
   /** 鼠标影响半径(px) */
@@ -52,6 +71,9 @@ const DEFAULT_CONFIG: Required<ParticleConfig> = {
   glowCount: 40,
   linkDistance: 120,
   pulseCount: 6,
+  meteorCount: 4,
+  meteorIntervalMin: 2000,
+  meteorIntervalMax: 5000,
   targetFps: 30,
   mouseRadius: 200,
   mouseForce: 0.3,
@@ -107,6 +129,9 @@ export class ParticleEngine {
   private running = false;
   // 呼吸脉冲位置(归一化)
   private pulses: Array<{ x: number; y: number; phase: number; size: number }> = [];
+  // 流星池
+  private meteors: Meteor[] = [];
+  private nextMeteorTime: number = 0;
 
   constructor(canvas: HTMLCanvasElement, config: ParticleConfig = {}) {
     this.canvas = canvas;
@@ -142,6 +167,30 @@ export class ParticleEngine {
         size: 80 + rand(i * 27.1) * 120,
       });
     }
+    // 流星池
+    this.meteors = [];
+    this.nextMeteorTime = performance.now() + 1000 + Math.random() * 2000;
+  }
+
+  /** 创建一颗流星 */
+  private spawnMeteor(): void {
+    const W = this.width;
+    const H = this.height;
+    // 角度15°~45°（斜向下）
+    const angle = (15 + Math.random() * 30) * Math.PI / 180;
+    // 从上方或右侧出发
+    const fromTop = Math.random() > 0.3;
+    const x = fromTop ? Math.random() * W : W + 20;
+    const y = fromTop ? -20 : Math.random() * H * 0.4;
+    const speed = 300 + Math.random() * 300; // px/s
+    const length = 80 + Math.random() * 120;
+    const maxLife = (Math.max(W, H) * 1.5) / speed;
+
+    this.meteors.push({
+      x, y, angle, speed, length,
+      life: 1, maxLife, elapsed: 0,
+      width: 1.5 + Math.random() * 0.5,
+    });
   }
 
   /** 处理resize */
@@ -226,8 +275,8 @@ export class ParticleEngine {
       const cy = pulse.y * H;
       const r = pulse.size * (0.8 + breath * 0.4);
       const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-      grad.addColorStop(0, `rgba(0,245,212,${alpha})`);
-      grad.addColorStop(1, 'rgba(0,245,212,0)');
+      grad.addColorStop(0, `rgba(212,175,55,${alpha})`);
+      grad.addColorStop(1, 'rgba(212,175,55,0)');
       ctx.fillStyle = grad;
       ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
     }
@@ -242,7 +291,7 @@ export class ParticleEngine {
 
       ctx.beginPath();
       ctx.arc(x, y, size, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(0,245,212,${alpha})`;
+      ctx.fillStyle = `rgba(212,175,55,${alpha})`;
       ctx.fill();
     }
 
@@ -264,7 +313,7 @@ export class ParticleEngine {
           ctx.beginPath();
           ctx.moveTo(ax, ay);
           ctx.lineTo(b.x * W, b.y * H);
-          ctx.strokeStyle = `rgba(0,245,212,${alpha})`;
+          ctx.strokeStyle = `rgba(212,175,55,${alpha})`;
           ctx.stroke();
         }
       }
@@ -292,6 +341,39 @@ export class ParticleEngine {
       ctx.fillStyle = `rgba(255,255,255,${alpha})`;
       ctx.fill();
     }
+
+    // ─── 流星 ───
+    for (const m of this.meteors) {
+      const fadeIn = Math.min(m.elapsed / 0.3, 1);
+      const fadeOut = Math.max(0, 1 - m.elapsed / m.maxLife);
+      const alpha = fadeIn * fadeOut;
+      if (alpha <= 0) continue;
+
+      const headX = m.x;
+      const headY = m.y;
+      const tailX = headX - Math.cos(m.angle) * m.length;
+      const tailY = headY - Math.sin(m.angle) * m.length;
+
+      // 尾迹渐变线
+      const grad = ctx.createLinearGradient(tailX, tailY, headX, headY);
+      grad.addColorStop(0, 'rgba(245,230,184,0)');
+      grad.addColorStop(0.6, `rgba(245,230,184,${alpha * 0.3})`);
+      grad.addColorStop(1, `rgba(255,248,225,${alpha * 0.8})`);
+
+      ctx.beginPath();
+      ctx.moveTo(tailX, tailY);
+      ctx.lineTo(headX, headY);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = m.width * alpha;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      // 头部光点
+      ctx.beginPath();
+      ctx.arc(headX, headY, m.width * 1.5 * alpha, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,248,225,${alpha * 0.9})`;
+      ctx.fill();
+    }
   }
 
   /** 动画循环 */
@@ -307,6 +389,23 @@ export class ParticleEngine {
     this.lastFrameTime = time - (delta % this.frameInterval);
 
     this.updateParticles(time);
+
+    // 流星：生成 + 更新
+    const dt = (time - this.lastFrameTime) / 1000 || 0.033;
+    if (time >= this.nextMeteorTime && this.meteors.length < this.config.meteorCount) {
+      this.spawnMeteor();
+      const interval = this.config.meteorIntervalMin +
+        Math.random() * (this.config.meteorIntervalMax - this.config.meteorIntervalMin);
+      this.nextMeteorTime = time + interval;
+    }
+    for (const m of this.meteors) {
+      m.x += Math.cos(m.angle) * m.speed * dt;
+      m.y += Math.sin(m.angle) * m.speed * dt;
+      m.elapsed += dt;
+    }
+    // 移除过期流星
+    this.meteors = this.meteors.filter(m => m.elapsed < m.maxLife);
+
     this.draw(time);
 
     this.rafId = requestAnimationFrame(this.animate);

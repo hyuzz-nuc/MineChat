@@ -70,14 +70,14 @@
 
 /* ────────────── 消息气泡毛玻璃 ────────────── */
 .glass-bubble-self {
-  background: linear-gradient(135deg, rgba(0, 245, 212, .08), rgba(0, 245, 212, .03));
-  border: 1px solid rgba(0, 245, 212, .18);
+  background: linear-gradient(135deg, rgba(212, 175, 55, .08), rgba(212, 175, 55, .03));
+  border: 1px solid rgba(212, 175, 55, .18);
   border-radius: 16px 16px 4px 16px;
   padding: 10px 14px;
   box-shadow:
-    0 0 20px rgba(0, 245, 212, .04),
+    0 0 20px rgba(212, 175, 55, .04),
     inset 0 1px 0 rgba(255, 255, 255, .06),
-    inset 0 0 0 1px rgba(0, 245, 212, .04);
+    inset 0 0 0 1px rgba(212, 175, 55, .04);
   word-break: break-word;
 }
 

@@ -379,8 +379,8 @@ const emit = defineEmits<{ close: [] }>();
 .profile-avatar-wrap { display: flex; justify-content: center; }
 .profile-avatar {
   width: 80px; height: 80px; border-radius: 50%; overflow: hidden;
-  background: linear-gradient(135deg, rgba(0,245,212,.3), rgba(115,167,255,.3));
-  border: 2px solid rgba(0,245,212,.3);
+  background: linear-gradient(135deg, rgba(212,175,55,.3), rgba(139,157,175,.3));
+  border: 2px solid rgba(212,175,55,.3);
   display: flex; align-items: center; justify-content: center;
 }
 .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -395,14 +395,14 @@ const emit = defineEmits<{ close: [] }>();
 .profile-edit-row { display: flex; align-items: center; gap: var(--space-2); }
 .profile-input {
   flex: 1; padding: 6px 10px; border-radius: var(--radius-md);
-  background: rgba(255,255,255,.06); border: 1px solid rgba(0,245,212,.3);
+  background: rgba(255,255,255,.06); border: 1px solid rgba(212,175,55,.3);
   color: var(--ink); font-size: var(--text-sm); outline: none;
 }
 .profile-input:focus { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(var(--accent-rgb),.2); }
 
 .profile-textarea {
   width: 100%; padding: 8px 10px; border-radius: var(--radius-md);
-  background: rgba(255,255,255,.06); border: 1px solid rgba(0,245,212,.3);
+  background: rgba(255,255,255,.06); border: 1px solid rgba(212,175,55,.3);
   color: var(--ink); font-size: var(--text-sm); outline: none; resize: none;
   font-family: inherit;
 }
@@ -411,8 +411,8 @@ const emit = defineEmits<{ close: [] }>();
 .profile-edit-col { display: flex; flex-direction: column; gap: 4px; }
 
 .profile-save-btn {
-  padding: 2px 8px; border-radius: var(--radius-sm); background: rgba(0,245,212,.15);
-  color: var(--accent); border: 1px solid rgba(0,245,212,.3); cursor: pointer; font-size: 13px;
+  padding: 2px 8px; border-radius: var(--radius-sm); background: rgba(212,175,55,.15);
+  color: var(--accent); border: 1px solid rgba(212,175,55,.3); cursor: pointer; font-size: 13px;
 }
 .profile-cancel-btn {
   padding: 2px 8px; border-radius: var(--radius-sm); background: rgba(255,71,87,.1);
@@ -425,7 +425,7 @@ const emit = defineEmits<{ close: [] }>();
   text-align: center; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;
   padding: 4px 0; border-radius: var(--radius-md); transition: background var(--duration-fast);
 }
-.profile-uid:hover { background: rgba(0,245,212,.08); }
+.profile-uid:hover { background: rgba(212,175,55,.08); }
 .uid-text { font-family: monospace; font-size: 13px; color: var(--accent); font-weight: 600; }
 .uid-copy { font-size: 12px; opacity: .5; }
 
@@ -459,7 +459,7 @@ const emit = defineEmits<{ close: [] }>();
   padding: 8px 12px; cursor: pointer; font-size: var(--text-sm);
   color: var(--ink); transition: background var(--duration-fast);
 }
-.status-option:hover { background: rgba(0,245,212,.08); }
+.status-option:hover { background: rgba(212,175,55,.08); }
 
 .profile-bio { font-size: var(--text-sm); color: var(--muted); line-height: 1.5; }
 
@@ -493,9 +493,9 @@ const emit = defineEmits<{ close: [] }>();
 }
 .bind-action-btn:hover { background: rgba(255,255,255,.1); color: var(--ink); }
 .bind-btn-primary {
-  background: rgba(0,245,212,.1); color: var(--accent); border-color: rgba(0,245,212,.2);
+  background: rgba(212,175,55,.1); color: var(--accent); border-color: rgba(212,175,55,.2);
 }
-.bind-btn-primary:hover { background: rgba(0,245,212,.2); }
+.bind-btn-primary:hover { background: rgba(212,175,55,.2); }
 
 /* ──── 绑定弹窗 ──── */
 .bind-modal-overlay {
@@ -520,12 +520,12 @@ const emit = defineEmits<{ close: [] }>();
 .code-input { width: 140px; }
 .send-code-btn {
   flex: 1; padding: 6px 10px; border-radius: var(--radius-md);
-  background: rgba(0,245,212,.1); color: var(--accent);
-  border: 1px solid rgba(0,245,212,.2); cursor: pointer;
+  background: rgba(212,175,55,.1); color: var(--accent);
+  border: 1px solid rgba(212,175,55,.2); cursor: pointer;
   font-size: var(--text-sm); transition: all var(--duration-fast);
   white-space: nowrap;
 }
-.send-code-btn:hover:not(:disabled) { background: rgba(0,245,212,.2); }
+.send-code-btn:hover:not(:disabled) { background: rgba(212,175,55,.2); }
 .send-code-btn:disabled { opacity: .5; cursor: not-allowed; }
 
 .bind-msg { font-size: 12px; text-align: center; padding: 4px 0; }

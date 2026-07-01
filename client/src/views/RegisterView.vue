@@ -143,8 +143,8 @@ async function handleRegister() {
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(ellipse at 20% 50%, rgba(0, 245, 212, .02) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(115, 167, 255, .015) 0%, transparent 50%),
+    radial-gradient(ellipse at 20% 50%, rgba(212, 175, 55, .02) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(139, 157, 175, .015) 0%, transparent 50%),
     linear-gradient(180deg, var(--bg-base) 0%, var(--bg-paper) 100%);
 }
 
@@ -161,7 +161,7 @@ async function handleRegister() {
 .register-title {
   font-size: var(--text-2xl);
   font-weight: var(--weight-bold);
-  background: linear-gradient(94deg, #fff 26%, rgba(0, 245, 212, .98) 68%);
+  background: linear-gradient(135deg, #8B7355 0%, #C9A84C 20%, #D4AF37 35%, #F5E6B8 50%, #D4AF37 65%, #C9A84C 80%, #8B7355 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -225,13 +225,14 @@ async function handleRegister() {
   height: 48px;
   margin-top: var(--space-2);
   border-radius: var(--radius-lg);
-  background: rgba(0, 245, 212, .12);
-  border: 1px solid rgba(0, 245, 212, .34);
-  color: var(--accent);
+  background: linear-gradient(135deg, #C9A84C, #D4AF37, #C9A84C);
+  border: 1px solid rgba(212,175,55,.34);
+  color: #08090B;
   font-size: var(--text-md);
   font-weight: var(--weight-bold);
   letter-spacing: .2em;
   cursor: pointer;
+  box-shadow: 0 4px 16px rgba(212,175,55,.3);
   transition: background var(--duration-fast) var(--ease-out-expo),
               border-color var(--duration-fast) var(--ease-out-expo),
               transform var(--duration-fast) var(--ease-out-expo),
@@ -239,10 +240,10 @@ async function handleRegister() {
 }
 
 .register-btn:hover:not(:disabled) {
-  background: rgba(0, 245, 212, .20);
-  border-color: rgba(0, 245, 212, .58);
+  background: linear-gradient(135deg, #D4AF37, #F5E6B8, #D4AF37);
+  border-color: rgba(212,175,55,.58);
   transform: translateY(-1px);
-  box-shadow: 0 16px 42px rgba(0, 0, 0, .30), 0 0 22px rgba(0, 245, 212, .06), inset 0 1px 0 rgba(255, 255, 255, .10);
+  box-shadow: 0 16px 42px rgba(0,0,0,.30), 0 0 22px rgba(212,175,55,.06), inset 0 1px 0 rgba(255,255,255,.10);
 }
 
 .register-btn:disabled {
