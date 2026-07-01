@@ -12,6 +12,7 @@
 export interface SplashParticle {
   x: number; y: number; vx: number; vy: number;
   r: number; a: number; p: number;
+  color: string; // RGB字符串如 '255,255,255'
 }
 
 export interface SplashStreak {
@@ -67,21 +68,26 @@ export class SplashEngine {
     const w = this.w, h = this.h;
     const rm = this.reduceMotion;
 
-    // 尘埃粒子
+    // 尘埃粒子（70%白 + 20%亮金 + 10%暗金）
     this.dust = [];
     const dustCount = rm ? 28 : 72;
     for (let i = 0; i < dustCount; i++) {
+      const rng = Math.random();
+      const color = rng < 0.10 ? '201,168,76'    // 暗金
+                  : rng < 0.30 ? '244,210,138'    // 亮金
+                  : '255,255,255';                 // 白
       this.dust.push({
         x: Math.random() * w, y: Math.random() * h,
         vx: (Math.random() - 0.5) * 0.18, vy: (Math.random() - 0.5) * 0.12,
         r: 0.5 + Math.random() * 1.5, a: 0.18 + Math.random() * 0.42, p: Math.random() * 6.28,
+        color,
       });
     }
 
     // 光束线条
     this.streaks = [];
     const streakCount = rm ? 4 : 10;
-    const colors = ['rgba(0,245,212,', 'rgba(244,210,138,', 'rgba(255,83,103,', 'rgba(115,167,255,'];
+    const colors = ['rgba(244,210,138,', 'rgba(201,168,76,', 'rgba(0,245,212,', 'rgba(232,180,184,'];
     for (let s = 0; s < streakCount; s++) {
       this.streaks.push({
         x: Math.random() * w, y: h * (0.20 + Math.random() * 0.62),
@@ -96,7 +102,7 @@ export class SplashEngine {
     // 碎片
     this.shards = [];
     const shardCount = rm ? 6 : 16;
-    const shardColors = ['rgba(244,210,138,', 'rgba(122,215,194,', 'rgba(255,83,103,', 'rgba(115,167,255,'];
+    const shardColors = ['rgba(244,210,138,', 'rgba(201,168,76,', 'rgba(0,245,212,', 'rgba(232,180,184,'];
     for (let h2 = 0; h2 < shardCount; h2++) {
       this.shards.push({
         ox: (Math.random() - 0.5) * w * 0.92, oy: (Math.random() - 0.5) * h * 0.22,
@@ -150,7 +156,7 @@ export class SplashEngine {
       if (d.y < -10) d.y = h + 10; if (d.y > h + 10) d.y = -10;
       const alpha = d.a * (0.58 + Math.sin(d.p + t * 0.8) * 0.34);
       ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255,255,255,${Math.max(0, alpha).toFixed(3)})`;
+      ctx.fillStyle = `rgba(${d.color},${Math.max(0, alpha).toFixed(3)})`;
       ctx.fill();
     }
 
@@ -201,11 +207,11 @@ export class SplashEngine {
       const flash = smoothstep(2.82, 2.96, t) * (1 - smoothstep(2.96, 3.12, t)) * exitFade;
       if (flash > 0.015) {
         const fg = ctx.createLinearGradient(0, centerY, w, centerY);
-        fg.addColorStop(0, 'rgba(0,245,212,0)');
-        fg.addColorStop(0.35, `rgba(0,245,212,${(0.28 * flash).toFixed(3)})`);
-        fg.addColorStop(0.5, `rgba(244,210,138,${(0.42 * flash).toFixed(3)})`);
-        fg.addColorStop(0.65, `rgba(0,245,212,${(0.28 * flash).toFixed(3)})`);
-        fg.addColorStop(1, 'rgba(0,245,212,0)');
+        fg.addColorStop(0, 'rgba(201,168,76,0)');
+        fg.addColorStop(0.35, `rgba(244,210,138,${(0.28 * flash).toFixed(3)})`);
+        fg.addColorStop(0.5, `rgba(255,248,225,${(0.42 * flash).toFixed(3)})`);
+        fg.addColorStop(0.65, `rgba(244,210,138,${(0.28 * flash).toFixed(3)})`);
+        fg.addColorStop(1, 'rgba(201,168,76,0)');
         ctx.fillStyle = fg;
         ctx.fillRect(0, centerY - 46 * flash, w, 92 * flash);
       }

@@ -1,8 +1,7 @@
 <script setup lang="ts">
 /**
- * 开机动画叠加层
- * 参照 MineRadio splash 效果
- * 全屏覆盖 → 粒子动画+品牌文字 → 用户交互 → 退出过渡
+ * 开机动画叠加层 V2
+ * 鎏金色彩 + 左右飞入弹性回弹 + shimmer波纹
  */
 import { ref, onMounted, onUnmounted } from 'vue';
 import { SplashEngine } from '../composables/splashEngine';
@@ -18,27 +17,18 @@ function dismiss() {
   if (timer) { clearTimeout(timer); timer = null; }
   ready.value = false;
   exiting.value = true;
-  // 退出动画1.18s
   setTimeout(() => {
     show.value = false;
     if (engine) { engine.destroy(); engine = null; }
   }, 1200);
 }
 
-function markReady() {
-  ready.value = true;
-}
+function markReady() { ready.value = true; }
 
 onMounted(() => {
   const canvas = document.getElementById('splash-canvas') as HTMLCanvasElement;
-  if (canvas) {
-    engine = new SplashEngine(canvas);
-    engine.start();
-  }
-  // 5秒后自动允许进入
+  if (canvas) { engine = new SplashEngine(canvas); engine.start(); }
   timer = setTimeout(markReady, 5000);
-
-  // 点击或按键退出
   function onInteract() {
     if (ready.value) dismiss();
     else { markReady(); setTimeout(dismiss, 300); }
@@ -59,8 +49,7 @@ onUnmounted(() => {
     <div class="splash-noise"></div>
     <div class="splash-content">
       <div class="splash-wordmark">
-        <span class="splash-word-mine">Mine</span>
-        <span class="splash-word-chat">Chat</span>
+        <span class="splash-word-mine">Mine</span><span class="splash-word-chat">Chat</span>
       </div>
       <div class="splash-signal-line"></div>
       <div class="splash-sub">real-time immersive chat</div>
@@ -81,7 +70,7 @@ onUnmounted(() => {
 .splash::before {
   content: ''; position: absolute; inset: -8%; z-index: 0;
   background:
-    linear-gradient(115deg, transparent 0%, rgba(0,245,212,.055) 24%, transparent 42%, rgba(244,210,138,.052) 62%, transparent 82%),
+    linear-gradient(115deg, transparent 0%, rgba(201,168,76,.055) 24%, transparent 42%, rgba(244,210,138,.052) 62%, transparent 82%),
     repeating-linear-gradient(90deg, rgba(255,255,255,.030) 0 1px, transparent 1px 54px),
     repeating-linear-gradient(0deg, rgba(255,255,255,.020) 0 1px, transparent 1px 46px),
     linear-gradient(180deg, #020606 0%, #050607 42%, #000 100%);
@@ -95,9 +84,7 @@ onUnmounted(() => {
     linear-gradient(180deg, rgba(0,0,0,.68), transparent 32%, transparent 64%, rgba(0,0,0,.74));
   pointer-events: none;
 }
-.splash.exiting {
-  pointer-events: none; opacity: 0; transform: scale(1.018);
-}
+.splash.exiting { pointer-events: none; opacity: 0; transform: scale(1.018); }
 
 .splash-canvas {
   position: absolute; inset: 0; z-index: 1; opacity: 1;
@@ -118,98 +105,141 @@ onUnmounted(() => {
   transition: opacity 680ms cubic-bezier(.22,1,.36,1), transform 860ms cubic-bezier(.22,1,.36,1);
 }
 
+/* ──── 品牌文字：并排布局 + 鎏金shimmer ──── */
 .splash-wordmark {
-  position: relative;
+  position: relative; overflow: hidden;
   display: flex; align-items: baseline; justify-content: center;
   height: clamp(70px, 12vw, 136px);
-  min-width: min(74vw, 760px);
   font-size: clamp(52px, 8.8vw, 112px);
-  line-height: .92; font-weight: 720; letter-spacing: -.055em;
-  color: #f8f8f2;
-  text-shadow: 0 20px 82px rgba(0,0,0,.68), -2px 0 18px rgba(0,245,212,.16), 2px 0 18px rgba(115,167,255,.12);
+  line-height: .92; font-weight: 720; letter-spacing: -.04em;
   isolation: isolate;
-  filter: drop-shadow(0 0 22px rgba(0,245,212,.075));
 }
 
-.splash-word-mine {
-  position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  white-space: nowrap; will-change: opacity, transform, letter-spacing;
+/* 鎏金波纹扫过效果 */
+.splash-wordmark::after {
+  content: ''; position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
+  background: linear-gradient(105deg,
+    transparent 0%,
+    rgba(244,210,138,0) 30%,
+    rgba(255,248,225,0.72) 48%,
+    rgba(244,210,138,0.5) 52%,
+    rgba(244,210,138,0) 70%,
+    transparent 100%
+  );
   opacity: 0;
-  animation: splash-mine-in 5200ms cubic-bezier(.22,1,.36,1) forwards;
-  text-shadow: -2px 0 0 rgba(0,245,212,.24), 2px 0 0 rgba(115,167,255,.18), 0 22px 72px rgba(0,0,0,.58), 0 0 34px rgba(0,245,212,.10);
+  animation: splash-shimmer 1.2s cubic-bezier(.22,1,.36,1) 3.3s forwards;
+  pointer-events: none;
 }
 
+/* "Mine" — 暗金色，从左侧飞入+弹性回弹 */
+.splash-word-mine {
+  display: inline-block; white-space: nowrap;
+  will-change: opacity, transform, letter-spacing;
+  color: #C9A84C;
+  text-shadow:
+    0 0 22px rgba(201,168,76,.35),
+    0 22px 72px rgba(0,0,0,.58),
+    -2px 0 0 rgba(0,245,212,.22),
+    2px 0 0 rgba(244,210,138,.18);
+  opacity: 0;
+  animation: splash-mine-in 800ms cubic-bezier(.22,1,.36,1) 2.0s forwards;
+}
+
+/* "Chat" — 鎏金渐变色，从右侧飞入+弹性回弹 */
 .splash-word-chat {
-  position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  white-space: nowrap; will-change: opacity, transform, letter-spacing;
-  opacity: 0; letter-spacing: -.018em;
-  background: linear-gradient(94deg, rgba(255,255,255,.06), #fff 26%, rgba(0,245,212,.98) 48%, rgba(244,210,138,.90) 68%, rgba(255,255,255,.82));
+  display: inline-block; white-space: nowrap; margin-left: 0.06em;
+  will-change: opacity, transform, letter-spacing;
+  background: linear-gradient(100deg,
+    rgba(255,255,255,.04) 0%,
+    #FFF8E1 22%,
+    #F4D28A 42%,
+    #C9A84C 58%,
+    #00F5D4 78%,
+    rgba(255,255,255,.72) 100%
+  );
   background-size: 300% 100%;
   -webkit-background-clip: text; background-clip: text;
   color: transparent; -webkit-text-fill-color: transparent;
-  animation: splash-chat-in 5200ms cubic-bezier(.22,1,.36,1) forwards;
+  opacity: 0;
+  animation: splash-chat-in 800ms cubic-bezier(.22,1,.36,1) 2.5s forwards,
+             splash-chat-gradient 3s ease-in-out 3.3s infinite alternate;
 }
 
 .splash-signal-line {
   position: relative;
   width: min(460px, 54vw); height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(0,245,212,.22), rgba(255,255,255,.78), rgba(244,210,138,.66), rgba(115,167,255,.22), transparent);
+  background: linear-gradient(90deg, transparent, rgba(201,168,76,.22), rgba(255,255,255,.78), rgba(244,210,138,.66), rgba(0,245,212,.22), transparent);
   opacity: 0; transform: scaleX(.12);
-  box-shadow: 0 0 18px rgba(0,245,212,.24), 0 0 34px rgba(244,210,138,.10);
+  box-shadow: 0 0 18px rgba(244,210,138,.24), 0 0 34px rgba(201,168,76,.10);
   animation: splash-signal-line 4200ms cubic-bezier(.22,1,.36,1) forwards;
 }
 .splash-signal-line::after {
   content: ''; position: absolute; left: 50%; top: 50%;
   width: 8px; height: 8px; border-radius: 50%;
-  background: rgba(255,255,255,.82);
-  box-shadow: 0 0 24px rgba(0,245,212,.54);
+  background: rgba(255,248,225,.82);
+  box-shadow: 0 0 24px rgba(244,210,138,.54);
   transform: translate(-50%, -50%) scale(.32); opacity: 0;
   animation: splash-signal-blip 4200ms cubic-bezier(.22,1,.36,1) forwards;
 }
 
 .splash-sub {
   font-size: 10px; font-weight: 600; letter-spacing: .22em;
-  color: rgba(255,255,255,.34); text-transform: uppercase;
+  color: rgba(244,210,138,.34); text-transform: uppercase;
   opacity: 0; animation: splash-sub-in 4200ms cubic-bezier(.22,1,.36,1) forwards;
 }
 
 .splash-enter {
   margin-top: 8px; font-size: 11px; font-weight: 700; letter-spacing: .24em;
-  color: rgba(255,255,255,.62); text-transform: uppercase;
+  color: rgba(244,210,138,.62); text-transform: uppercase;
   opacity: 0; transform: translateY(10px);
-  text-shadow: 0 0 18px rgba(0,245,212,.24), 0 0 34px rgba(244,210,138,.12);
+  text-shadow: 0 0 18px rgba(201,168,76,.24), 0 0 34px rgba(0,245,212,.12);
   transition: opacity 620ms cubic-bezier(.22,1,.36,1), transform 620ms cubic-bezier(.22,1,.36,1);
   animation: splash-enter-pulse 1800ms ease-in-out infinite alternate;
 }
+
+/* ──── 关键帧动画 ──── */
 
 @keyframes splash-field-breathe {
   0% { opacity: .72; transform: scale(1) }
   100% { opacity: 1; transform: scale(1.035) }
 }
 
+/* "Mine"从左飞入+弹性回弹 */
 @keyframes splash-mine-in {
-  0% { opacity: 0; clip-path: inset(48% 0 49% 0); transform: translate(calc(-50% - 10px), -42%) skewX(-10deg) scaleX(1.08); letter-spacing: .055em }
-  14% { opacity: .92; clip-path: inset(40% 0 42% 0); transform: translate(calc(-50% - 4px), -50%) skewX(-4deg) scaleX(1.04); letter-spacing: .014em }
-  26% { opacity: 1; clip-path: inset(0); transform: translate(-50%, -50%) skewX(0) scaleX(1); letter-spacing: -.040em }
-  48% { opacity: 1; transform: translate(-50%, -50%) scale(1) }
-  67% { opacity: 1; transform: translate(calc(-50% - 2px), -50%) }
-  100% { opacity: 1; transform: translate(-50%, -50%) }
+  0% { opacity: 0; transform: translateX(-120px) skewX(-12deg) scaleX(1.15); letter-spacing: .08em }
+  40% { opacity: 1; transform: translateX(12px) skewX(2deg) scaleX(.97); letter-spacing: -.02em }
+  60% { transform: translateX(-6px) skewX(-1deg) scaleX(1.02) }
+  80% { transform: translateX(2px) skewX(0) scaleX(.99) }
+  100% { opacity: 1; transform: translateX(0) skewX(0) scaleX(1); letter-spacing: -.04em }
 }
 
+/* "Chat"从右飞入+弹性回弹 */
 @keyframes splash-chat-in {
-  0%, 32% { opacity: 0; clip-path: inset(52% 0 44% 0); transform: translate(calc(-50% + 80px), -50%) skewX(9deg) scaleX(1.06); background-position: 0 0 }
-  48% { opacity: .88; clip-path: inset(34% 0 32% 0); transform: translate(calc(-50% + 72px), -50%) skewX(3deg) scaleX(1.02); background-position: 52% 0 }
-  66% { opacity: 1; clip-path: inset(0); transform: translate(calc(-50% + 70px), -50%) scale(1); background-position: 76% 0 }
-  100% { opacity: 1; transform: translate(-50%, -50%); background-position: 100% 0 }
+  0% { opacity: 0; transform: translateX(120px) skewX(12deg) scaleX(1.15); letter-spacing: .08em }
+  40% { opacity: 1; transform: translateX(-12px) skewX(-2deg) scaleX(.97); letter-spacing: -.02em }
+  60% { transform: translateX(6px) skewX(1deg) scaleX(1.02) }
+  80% { transform: translateX(-2px) skewX(0) scaleX(.99) }
+  100% { opacity: 1; transform: translateX(0) skewX(0) scaleX(1); letter-spacing: -.04em }
+}
+
+/* 鎏金渐变流动 */
+@keyframes splash-chat-gradient {
+  0% { background-position: 0% 50% }
+  100% { background-position: 100% 50% }
+}
+
+/* 鎏金shimmer波纹 */
+@keyframes splash-shimmer {
+  0% { left: -100%; opacity: 0 }
+  20% { opacity: 1 }
+  100% { left: 200%; opacity: 0 }
 }
 
 @keyframes splash-signal-line {
   0%, 28% { opacity: 0; transform: scaleX(.10) }
   44% { opacity: .98; transform: scaleX(1.05) }
   64% { opacity: .70; transform: scaleX(.82) }
-  76% { opacity: 1; transform: scaleX(1.14); box-shadow: 0 0 28px rgba(0,245,212,.36), 0 0 60px rgba(244,210,138,.18) }
+  76% { opacity: 1; transform: scaleX(1.14); box-shadow: 0 0 28px rgba(244,210,138,.36), 0 0 60px rgba(201,168,76,.18) }
   100% { opacity: .30; transform: scaleX(.64) }
 }
 
@@ -227,7 +257,7 @@ onUnmounted(() => {
 }
 
 @keyframes splash-enter-pulse {
-  0% { opacity: .46; text-shadow: 0 0 14px rgba(0,245,212,.16), 0 0 26px rgba(244,210,138,.08) }
-  100% { opacity: .78; text-shadow: 0 0 22px rgba(0,245,212,.30), 0 0 42px rgba(244,210,138,.16) }
+  0% { opacity: .46; text-shadow: 0 0 14px rgba(201,168,76,.16), 0 0 26px rgba(0,245,212,.08) }
+  100% { opacity: .78; text-shadow: 0 0 22px rgba(244,210,138,.30), 0 0 42px rgba(0,245,212,.16) }
 }
 </style>
