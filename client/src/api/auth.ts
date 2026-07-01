@@ -43,7 +43,15 @@ export function sendCodeApi(data: { type: 'email' | 'phone'; target: string; pur
   return request.post('/auth/send-code', data);
 }
 
-/** 绑定邮箱/手机号 */
+/** 发送登录验证码（无需登录） */
+export function sendLoginCodeApi(data: { type: 'email' | 'phone'; target: string }) {
+  return request.post('/auth/send-login-code', data);
+}
+
+/** 验证码登录（无需登录） */
+export function loginByCodeApi(data: { type: 'email' | 'phone'; target: string; code: string }) {
+  return request.post('/auth/login-by-code', data);
+}
 export function bindAccountApi(data: { type: 'email' | 'phone'; target: string; code: string }) {
   return request.post('/user/bind', data);
 }
