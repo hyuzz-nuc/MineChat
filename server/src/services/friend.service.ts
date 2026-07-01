@@ -121,12 +121,17 @@ export async function getFriendList(userId: string) {
     },
   });
 
-  // 提取对方的信息
+  // 提取对方的信息，将id映射为userId方便前端使用
   const friends = friendships.map((f: any) => {
     const friendUser = f.requesterId === userId ? f.addressee : f.requester;
     return {
       friendshipId: f.id,
-      ...friendUser,
+      userId: friendUser.id,
+      uid: friendUser.uid,
+      username: friendUser.username,
+      nickname: friendUser.nickname,
+      avatar: friendUser.avatar,
+      status: friendUser.status,
     };
   });
 
