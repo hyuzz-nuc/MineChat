@@ -80,4 +80,17 @@ async function startServer(): Promise<void> {
 
 startServer();
 
+/* ────────────── 全局错误兜底（防止async错误导致进程崩溃） ────────────── */
+
+process.on('unhandledRejection', (reason: any) => {
+  logger.error(`Unhandled Rejection: ${reason?.message || reason}`);
+  // 不退出进程，只记录日志。Express errorHandler会处理已到达中间件的错误
+});
+
+process.on('uncaughtException', (err: Error) => {
+  logger.error(`Uncaught Exception: ${err.message}`, { stack: err.stack });
+  // 严重错误：记录后安全退出
+  process.exit(1);
+});
+
 export { app, io };

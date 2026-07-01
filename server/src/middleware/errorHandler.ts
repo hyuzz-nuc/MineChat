@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction, type RequestHandler } from 'express';
 import { logger } from '../utils/logger.js';
 
 /** 统一API响应格式 */
@@ -30,6 +30,17 @@ export class AppError extends Error {
   }
 }
 
+/**
+ * Async route handler 包装器
+ * Express 4 不会自动捕获 async handler 中的错误
+ * 此包装器将 async 错误自动传给 next() → errorHandler
+ */
+export function asyncHandler(fn: (req: Request, res: Response, next: NextFunction) => Promise<void>): RequestHandler {
+  return (req: Request, res: Response, next: NextFunction) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+}
+
 /** 全局错误处理中间件 */
 export function errorHandler(
   err: Error | AppError,
@@ -40,6 +51,13 @@ export function errorHandler(
   if (err instanceof AppError) {
     logger.warn(`[${err.code}] ${err.message}`);
     res.status(err.statusCode).json(error(err.message, err.code));
+    return;
+  }
+
+  // Prisma known request errors (e.g. unique constraint violation)
+  if ((err as any).code && typeof (err as any).code === 'string' && (err as any).code.startsWith('P')) {
+    logger.error(`Prisma error: ${(err as any).code} - ${err.message}`);
+    res.status(400).json(error(err.message || '数据库操作错误', -400));
     return;
   }
 

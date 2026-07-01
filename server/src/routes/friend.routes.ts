@@ -5,29 +5,15 @@ import { Router, type Router as RouterType } from 'express';
 import * as friendController from '../controllers/friend.controller.js';
 import { authGuard } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { z } from 'zod';
+import { asyncHandler } from '../middleware/errorHandler.js';
+import { sendRequestSchema, handleRequestSchema } from '../validators/friend.js';
 
 const router: RouterType = Router();
 
-router.use(authGuard);
-
-/** 发送好友请求 */
-router.post(
-  '/friends/request',
-  validate(z.object({ targetUserId: z.string().min(1) })),
-  friendController.sendRequest,
-);
-
-/** 同意好友请求 */
-router.patch('/friends/:friendshipId/accept', friendController.acceptRequest);
-
-/** 拒绝好友请求 */
-router.patch('/friends/:friendshipId/reject', friendController.rejectRequest);
-
-/** 获取好友列表 */
-router.get('/friends', friendController.getFriendList);
-
-/** 获取待处理好友请求 */
-router.get('/friends/pending', friendController.getPendingRequests);
+router.post('/friend/request', authGuard, validate(sendRequestSchema), asyncHandler(friendController.sendRequest));
+router.post('/friend/accept/:friendshipId', authGuard, asyncHandler(friendController.acceptRequest));
+router.post('/friend/reject/:friendshipId', authGuard, asyncHandler(friendController.rejectRequest));
+router.get('/friend/list', authGuard, asyncHandler(friendController.getFriendList));
+router.get('/friend/requests', authGuard, asyncHandler(friendController.getPendingRequests));
 
 export default router;
