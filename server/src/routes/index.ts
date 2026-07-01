@@ -8,6 +8,7 @@ import userRoutes from './user.routes.js';
 import messageRoutes from './message.routes.js';
 import friendRoutes from './friend.routes.js';
 import bindRoutes from './bind.routes.js';
+import videoParserRoutes from './video-parser.routes.js';
 
 const router: RouterType = Router();
 
@@ -27,5 +28,8 @@ router.use(friendRoutes);
 
 /** 账号绑定相关路由 */
 router.use(bindRoutes);
+
+/** 视频解析路由 */
+router.use(videoParserRoutes);
 
 export default router;

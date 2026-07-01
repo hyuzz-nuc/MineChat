@@ -11,6 +11,7 @@ import { useUserStore } from '../stores/user';
 import { useSocket } from '../composables/useSocket';
 import VideoPlayer from '../components/theater/VideoPlayer.vue';
 import ChatSidebar from '../components/theater/ChatSidebar.vue';
+import VideoParser from '../components/theater/VideoParser.vue';
 import type { DanmakuItem } from '../composables/danmakuEngine';
 
 const router = useRouter();
@@ -21,6 +22,7 @@ const roomName = ref('演播厅');
 const sourceUrl = ref('');
 const sourceInput = ref('');
 const showSourceDialog = ref(true);
+const sourceTab = ref<'direct' | 'parse'>('parse'); // 默认显示解析面板
 const isOwner = ref(true);
 
 // 聊天消息
@@ -125,6 +127,13 @@ function goBack(): void { router.push('/'); }
 /** 切换视频源 */
 function changeSource(): void { showSourceDialog.value = true; sourceInput.value = sourceUrl.value; }
 
+/** 解析结果回调 */
+function onVideoParsed(videoUrl: string, videoType: string): void {
+  sourceUrl.value = videoUrl;
+  showSourceDialog.value = false;
+  addSystemMsg(`视频源已加载 (${videoType})`);
+}
+
 onMounted(() => {
   // 模拟初始成员
   members.value = [{
@@ -182,18 +191,33 @@ onMounted(() => {
       <div v-if="showSourceDialog" class="source-overlay" @click.self="showSourceDialog = false">
         <div class="source-dialog glass-panel">
           <h2 class="dialog-title">🎬 加载视频</h2>
-          <p class="dialog-desc">输入视频直链URL（支持 .mp4 / .webm / .m3u8）</p>
-          <input
-            v-model="sourceInput"
-            type="url"
-            placeholder="https://example.com/video.mp4"
-            class="source-input"
-            @keydown.enter="loadSource"
-          />
-          <div class="dialog-actions">
-            <button v-if="sourceUrl" class="btn-cancel" @click="showSourceDialog = false">取消</button>
-            <button class="btn-load" @click="loadSource" :disabled="!sourceInput.trim()">加载播放</button>
+
+          <!-- Tab切换 -->
+          <div class="source-tabs">
+            <button class="source-tab" :class="{ active: sourceTab === 'parse' }" @click="sourceTab = 'parse'">🔗 短视频解析</button>
+            <button class="source-tab" :class="{ active: sourceTab === 'direct' }" @click="sourceTab = 'direct'">📎 直链输入</button>
           </div>
+
+          <!-- 短视频解析面板 -->
+          <template v-if="sourceTab === 'parse'">
+            <VideoParser @parsed="onVideoParsed" @close="showSourceDialog = false" />
+          </template>
+
+          <!-- 直链输入面板 -->
+          <template v-else>
+            <p class="dialog-desc">输入视频直链URL（支持 .mp4 / .webm / .m3u8）</p>
+            <input
+              v-model="sourceInput"
+              type="url"
+              placeholder="https://example.com/video.mp4"
+              class="source-input"
+              @keydown.enter="loadSource"
+            />
+            <div class="dialog-actions">
+              <button v-if="sourceUrl" class="btn-cancel" @click="showSourceDialog = false">取消</button>
+              <button class="btn-load" @click="loadSource" :disabled="!sourceInput.trim()">加载播放</button>
+            </div>
+          </template>
         </div>
       </div>
     </Teleport>
@@ -273,8 +297,17 @@ onMounted(() => {
 }
 .dialog-title {
   font-size: var(--text-xl); font-weight: var(--weight-bold); color: var(--ink);
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
 }
+.source-tabs { display: flex; gap: var(--space-1); margin-bottom: var(--space-4); }
+.source-tab {
+  flex: 1; height: 38px; display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-lg); font-size: var(--text-sm); color: var(--muted);
+  cursor: pointer; transition: color var(--duration-fast), background var(--duration-fast), border-color var(--duration-fast);
+  border: 1px solid rgba(255,255,255,.06); background: rgba(255,255,255,.03);
+}
+.source-tab:hover { color: var(--ink-2); background: rgba(255,255,255,.06); }
+.source-tab.active { color: var(--accent); background: rgba(212,175,55,.08); border-color: rgba(212,175,55,.25); }
 .dialog-desc { font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-5); }
 .source-input {
   width: 100%; height: 44px; padding: 0 var(--space-4);
