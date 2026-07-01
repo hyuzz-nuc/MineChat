@@ -60,6 +60,7 @@ async function handleRegister() {
       userId: res.data.user.id,
       uid: res.data.user.uid,
       username: res.data.user.username,
+      nickname: res.data.user.nickname || '',
       avatar: res.data.user.avatar || '',
     });
 

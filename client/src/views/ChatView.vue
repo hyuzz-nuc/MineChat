@@ -30,6 +30,23 @@ function sendMessage() {
   const content = messageInput.value.trim();
   if (!content || !chatStore.currentRoomId) return;
   const socket = useSocket();
+  // 乐观更新：先本地添加消息，立即显示
+  chatStore.addLocalMessage({
+    id: `local_${Date.now()}`,
+    roomId: chatStore.currentRoomId,
+    senderId: myId.value,
+    type: 'TEXT',
+    content,
+    status: 'SENT',
+    replyTo: null,
+    createdAt: new Date().toISOString(),
+    sender: {
+      id: myId.value,
+      username: userStore.username || '',
+      nickname: userStore.nickname || '',
+      avatar: null,
+    },
+  });
   socket.emit('message:send', { roomId: chatStore.currentRoomId, type: 'TEXT', content });
   messageInput.value = '';
   socket.emit('typing:stop', { roomId: chatStore.currentRoomId });

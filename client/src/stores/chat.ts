@@ -189,7 +189,11 @@ export const useChatStore = defineStore('chat', () => {
 
   /** 接收新消息（Socket推送） */
   function onNewMessage(message: ChatMessage) {
-    if (message.roomId === currentRoomId.value) {
+    // 避免重复：如果是自己发的乐观更新消息，替换本地消息
+    const localIdx = currentMessages.value.findIndex(m => m.id === `local_${message.id}` || m.id === message.id);
+    if (localIdx > -1) {
+      currentMessages.value[localIdx] = message;
+    } else if (message.roomId === currentRoomId.value) {
       currentMessages.value.push(message);
     }
     // 更新会话列表中的最后消息
@@ -230,6 +234,13 @@ export const useChatStore = defineStore('chat', () => {
     } else {
       const idx = list.indexOf(userId);
       if (idx > -1) list.splice(idx, 1);
+    }
+  }
+
+  /** 本地乐观添加消息（发送时立即显示） */
+  function addLocalMessage(message: ChatMessage) {
+    if (message.roomId === currentRoomId.value) {
+      currentMessages.value.push(message);
     }
   }
 
@@ -414,6 +425,7 @@ export const useChatStore = defineStore('chat', () => {
     selectConversation,
     fetchMessages,
     startDirectChat,
+    addLocalMessage,
     onNewMessage,
     onConversationUpdate,
     setTyping,
