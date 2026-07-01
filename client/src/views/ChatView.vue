@@ -114,6 +114,7 @@ onUnmounted(() => { chatStore.removeSocketListeners(); if (typingTimer) clearTim
       <div class="nav-logo">M</div>
       <div class="nav-icon" :class="{ active: chatStore.sidebarView === 'conversations' }" title="消息" @click="onNavClick('conversations')">💬</div>
       <div class="nav-icon" :class="{ active: chatStore.sidebarView === 'friends' }" title="联系人" @click="onNavClick('friends')">👥</div>
+      <div class="nav-icon" title="演播厅" @click="router.push('/theater')">🎬</div>
       <div class="nav-spacer"></div>
       <div class="nav-avatar" @click="showProfile = !showProfile" title="个人中心">{{ userStore.username?.charAt(0)?.toUpperCase() || '?' }}</div>
     </nav>

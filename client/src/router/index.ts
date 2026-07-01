@@ -21,6 +21,12 @@ const router = createRouter({
       component: () => import('../views/ChatView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/theater',
+      name: 'Theater',
+      component: () => import('../views/TheaterView.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 });
 
