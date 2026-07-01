@@ -37,3 +37,26 @@ export function updateProfileApi(data: { nickname?: string; avatar?: string; bio
 export function searchUsersApi(keyword: string) {
   return request.get('/user/search', { params: { keyword } });
 }
+
+/** 发送验证码 */
+export function sendCodeApi(data: { type: 'email' | 'phone'; target: string; purpose: 'bind' | 'unbind' | 'login' }) {
+  return request.post('/auth/send-code', data);
+}
+
+/** 发送登录验证码（无需登录） */
+export function sendLoginCodeApi(data: { type: 'email' | 'phone'; target: string }) {
+  return request.post('/auth/send-login-code', data);
+}
+
+/** 验证码登录（无需登录） */
+export function loginByCodeApi(data: { type: 'email' | 'phone'; target: string; code: string }) {
+  return request.post('/auth/login-by-code', data);
+}
+export function bindAccountApi(data: { type: 'email' | 'phone'; target: string; code: string }) {
+  return request.post('/user/bind', data);
+}
+
+/** 解绑邮箱/手机号 */
+export function unbindAccountApi(data: { type: 'email' | 'phone'; code: string }) {
+  return request.post('/user/unbind', data);
+}

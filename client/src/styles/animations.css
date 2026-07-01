@@ -47,10 +47,10 @@
 /* ────────────── 未读徽章脉冲 ────────────── */
 @keyframes badgePulse {
   0% {
-    box-shadow: 0 0 12px rgba(0, 245, 212, .40);
+    box-shadow: 0 0 12px rgba(212, 175, 55, .40);
   }
   100% {
-    box-shadow: 0 0 20px rgba(0, 245, 212, .56);
+    box-shadow: 0 0 20px rgba(212, 175, 55, .56);
   }
 }
 
@@ -69,10 +69,10 @@
 /* ────────────── 在线状态灯呼吸 ────────────── */
 @keyframes statusBreathe {
   0%, 100% {
-    box-shadow: 0 0 8px rgba(0, 245, 212, .40);
+    box-shadow: 0 0 8px rgba(212, 175, 55, .40);
   }
   50% {
-    box-shadow: 0 0 14px rgba(0, 245, 212, .70);
+    box-shadow: 0 0 14px rgba(212, 175, 55, .70);
   }
 }
 

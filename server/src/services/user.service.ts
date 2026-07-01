@@ -7,6 +7,7 @@ import prisma from '../config/database.js';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../utils/auth.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { logger } from '../utils/logger.js';
+import { sendVerifyCode, verifyCode, type VerifyType, type VerifyPurpose } from '../services/verify-code.service.js';
 
 const SALT_ROUNDS = 12;
 
@@ -151,6 +152,9 @@ export async function getUserProfile(userId: string) {
       nickname: true,
       avatar: true,
       bio: true,
+      phone: true,
+      emailVerified: true,
+      phoneVerified: true,
       status: true,
       lastSeenAt: true,
       createdAt: true,
@@ -221,4 +225,60 @@ export async function searchUsers(keyword: string, currentUserId: string) {
     take: 20,
   });
   return users;
+}
+
+/** 发送登录验证码（无需鉴权） */
+export async function sendLoginCode(type: VerifyType, target: string): Promise<void> {
+  // 检查用户是否存在
+  const user = await prisma.user.findFirst({
+    where: type === 'email' ? { email: target } : { phone: target } as any,
+  });
+  if (!user) {
+    throw new AppError(404, '该邮箱/手机号未注册', 40401);
+  }
+  // 发送验证码（purpose='login'）
+  await sendVerifyCode(type, target, 'login');
+}
+
+/** 验证码登录 */
+export async function loginByCode(type: VerifyType, target: string, code: string) {
+  // 验证码校验
+  const isValid = await verifyCode(type, target, code);
+  if (!isValid) {
+    throw new AppError(401, '验证码错误或已过期', 40104);
+  }
+
+  // 查找用户
+  const user = await prisma.user.findFirst({
+    where: type === 'email' ? { email: target } : { phone: target } as any,
+  });
+  if (!user) {
+    throw new AppError(404, '该邮箱/手机号未注册', 40401);
+  }
+
+  // 更新在线状态
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { status: 'ONLINE', lastSeenAt: new Date() },
+  });
+
+  // 签发令牌
+  const accessToken = signAccessToken({ userId: user.id, username: user.username });
+  const refreshToken = signRefreshToken({ userId: user.id, tokenVersion: 0 });
+
+  logger.info(`用户验证码登录成功: ${user.username}`);
+  return {
+    user: {
+      id: user.id,
+      uid: (user as any).uid,
+      username: user.username,
+      email: user.email,
+      nickname: user.nickname,
+      avatar: user.avatar,
+      bio: user.bio,
+      status: 'ONLINE' as const,
+    },
+    accessToken,
+    refreshToken,
+  };
 }

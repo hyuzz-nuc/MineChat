@@ -4,12 +4,14 @@ import { useUserStore } from '../stores/user';
 import { useChatStore, type ChatMessage } from '../stores/chat';
 import { useSocket, disconnectSocket } from '../composables/useSocket';
 import { useRouter } from 'vue-router';
+import ProfilePanel from '../components/ProfilePanel.vue';
 
 const router = useRouter();
 const userStore = useUserStore();
 const chatStore = useChatStore();
 const messageInput = ref('');
 const messagesContainer = ref<HTMLElement | null>(null);
+const showProfile = ref(false);
 let typingTimer: ReturnType<typeof setTimeout> | null = null;
 
 const myId = computed(() => userStore.userId);
@@ -85,7 +87,7 @@ onUnmounted(() => { chatStore.removeSocketListeners(); if (typingTimer) clearTim
       <div class="nav-icon" :class="{ active: chatStore.sidebarView === 'conversations' }" title="消息" @click="onNavClick('conversations')">💬</div>
       <div class="nav-icon" :class="{ active: chatStore.sidebarView === 'friends' }" title="联系人" @click="onNavClick('friends')">👥</div>
       <div class="nav-spacer"></div>
-      <div class="nav-avatar" @click="handleLogout" title="退出登录">{{ userStore.username?.charAt(0)?.toUpperCase() || '?' }}</div>
+      <div class="nav-avatar" @click="showProfile = !showProfile" title="个人中心">{{ userStore.username?.charAt(0)?.toUpperCase() || '?' }}</div>
     </nav>
 
     <aside class="chat-sidebar glass-sidebar">
@@ -180,6 +182,9 @@ onUnmounted(() => { chatStore.removeSocketListeners(); if (typingTimer) clearTim
       </template>
     </aside>
 
+    <!-- 个人中心面板 -->
+    <ProfilePanel v-if="showProfile" @close="showProfile = false" />
+
     <main class="chat-main">
       <template v-if="hasActiveChat && chatStore.currentConversation">
         <div class="chat-header glass-panel"><span class="chat-header-name">{{ chatStore.currentConversation.displayName }}</span></div>
@@ -224,9 +229,9 @@ onUnmounted(() => { chatStore.removeSocketListeners(); if (typingTimer) clearTim
 .nav-logo { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: var(--accent); margin-bottom: var(--space-2); }
 .nav-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-md); font-size: 18px; cursor: pointer; color: rgba(255,255,255,.48); transition: color var(--duration-fast) var(--ease-out-expo), background var(--duration-fast) var(--ease-out-expo), transform var(--duration-fast) var(--ease-out-expo); }
 .nav-icon:hover { color: #fff; background: rgba(255,255,255,.06); transform: translateY(-1px); }
-.nav-icon.active { color: var(--accent); background: rgba(0,245,212,.08); box-shadow: inset 2px 0 0 var(--accent); }
+.nav-icon.active { color: var(--accent); background: rgba(212,175,55,.08); box-shadow: inset 2px 0 0 var(--accent); }
 .nav-spacer { flex: 1; }
-.nav-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(0,245,212,.3), rgba(115,167,255,.3)); border: 1px solid rgba(255,255,255,.12); font-size: 14px; font-weight: 600; color: #fff; cursor: pointer; transition: transform var(--duration-fast) var(--ease-out-expo); }
+.nav-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(212,175,55,.3), rgba(139,157,175,.3)); border: 1px solid rgba(255,255,255,.12); font-size: 14px; font-weight: 600; color: #fff; cursor: pointer; transition: transform var(--duration-fast) var(--ease-out-expo); }
 .nav-avatar:hover { transform: scale(1.05); }
 
 .chat-sidebar { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; padding: var(--space-4); gap: var(--space-3); }
@@ -248,24 +253,24 @@ onUnmounted(() => { chatStore.removeSocketListeners(); if (typingTimer) clearTim
 .friend-info { flex: 1; min-width: 0; }
 .friend-name { font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--ink); }
 .friend-request-actions { display: flex; gap: var(--space-2); margin-top: 4px; }
-.btn-accept { padding: 2px 12px; border-radius: var(--radius-md); background: rgba(0,245,212,.15); color: var(--accent); border: 1px solid rgba(0,245,212,.3); font-size: 12px; cursor: pointer; transition: background var(--duration-fast) var(--ease-out-expo); }
-.btn-accept:hover { background: rgba(0,245,212,.25); }
+.btn-accept { padding: 2px 12px; border-radius: var(--radius-md); background: rgba(212,175,55,.15); color: var(--accent); border: 1px solid rgba(212,175,55,.3); font-size: 12px; cursor: pointer; transition: background var(--duration-fast) var(--ease-out-expo); }
+.btn-accept:hover { background: rgba(212,175,55,.25); }
 .btn-reject { padding: 2px 12px; border-radius: var(--radius-md); background: rgba(255,71,87,.1); color: #FF4757; border: 1px solid rgba(255,71,87,.2); font-size: 12px; cursor: pointer; transition: background var(--duration-fast) var(--ease-out-expo); }
 .btn-reject:hover { background: rgba(255,71,87,.2); }
 .friend-status { font-size: 11px; color: var(--muted); }
 .friend-status.online { color: var(--accent); }
 .user-uid { font-size: 11px; color: var(--accent); opacity: .7; font-family: monospace; }
-.btn-add-friend { margin-top: 4px; padding: 2px 12px; border-radius: var(--radius-md); background: rgba(0,245,212,.12); color: var(--accent); border: 1px solid rgba(0,245,212,.25); font-size: 12px; cursor: pointer; transition: background var(--duration-fast) var(--ease-out-expo); }
-.btn-add-friend:hover { background: rgba(0,245,212,.22); }
+.btn-add-friend { margin-top: 4px; padding: 2px 12px; border-radius: var(--radius-md); background: rgba(212,175,55,.12); color: var(--accent); border: 1px solid rgba(212,175,55,.25); font-size: 12px; cursor: pointer; transition: background var(--duration-fast) var(--ease-out-expo); }
+.btn-add-friend:hover { background: rgba(212,175,55,.22); }
 .search-results { margin-bottom: var(--space-2); }
 
 .conv-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-lg); cursor: pointer; transition: background var(--duration-fast) var(--ease-out-expo); }
 .conv-item:hover { background: rgba(255,255,255,.04); }
-.conv-item.active { background: rgba(0,245,212,.08); }
-.conv-avatar { width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; position: relative; overflow: hidden; background: linear-gradient(135deg, rgba(0,245,212,.2), rgba(115,167,255,.2)); display: flex; align-items: center; justify-content: center; }
+.conv-item.active { background: rgba(212,175,55,.08); }
+.conv-avatar { width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; position: relative; overflow: hidden; background: linear-gradient(135deg, rgba(212,175,55,.2), rgba(139,157,175,.2)); display: flex; align-items: center; justify-content: center; }
 .conv-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .conv-avatar-text { font-size: 16px; font-weight: 600; color: #fff; }
-.conv-online-dot { position: absolute; bottom: 1px; right: 1px; width: 10px; height: 10px; border-radius: 50%; background: #00F5D4; border: 2px solid var(--bg-base); animation: statusBreathe 2s ease-in-out infinite; }
+.conv-online-dot { position: absolute; bottom: 1px; right: 1px; width: 10px; height: 10px; border-radius: 50%; background: #D4AF37; border: 2px solid var(--bg-base); animation: statusBreathe 2s ease-in-out infinite; }
 .conv-info { flex: 1; min-width: 0; }
 .conv-top { display: flex; justify-content: space-between; align-items: center; }
 .conv-name { font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -274,7 +279,7 @@ onUnmounted(() => { chatStore.removeSocketListeners(); if (typingTimer) clearTim
 .conv-preview { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .conv-badge { flex-shrink: 0; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--accent); color: var(--bg-base); font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-left: var(--space-2); animation: badgePulse 2s ease-in-out infinite; }
 
-.chat-main { flex: 1; display: flex; flex-direction: column; background: radial-gradient(ellipse at 20% 50%, rgba(0,245,212,.02) 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, rgba(115,167,255,.015) 0%, transparent 50%), var(--bg-base); }
+.chat-main { flex: 1; display: flex; flex-direction: column; background: radial-gradient(ellipse at 20% 50%, rgba(212,175,55,.02) 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, rgba(139,157,175,.015) 0%, transparent 50%), var(--bg-base); }
 .chat-header { height: 60px; display: flex; align-items: center; padding: 0 var(--space-5); border-radius: 0; }
 .chat-header-name { font-size: var(--text-md); font-weight: var(--weight-semibold); color: var(--ink); }
 
@@ -283,7 +288,7 @@ onUnmounted(() => { chatStore.removeSocketListeners(); if (typingTimer) clearTim
 .msg-row { display: flex; gap: var(--space-2); animation: messageAppear .3s var(--ease-out-expo); }
 .msg-row.self { flex-direction: row-reverse; }
 .msg-system { text-align: center; color: var(--muted); font-size: var(--text-sm); padding: var(--space-2) 0; width: 100%; }
-.msg-avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; background: linear-gradient(135deg, rgba(0,245,212,.2), rgba(115,167,255,.2)); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #fff; }
+.msg-avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; background: linear-gradient(135deg, rgba(212,175,55,.2), rgba(139,157,175,.2)); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #fff; }
 .msg-body { max-width: 65%; }
 .msg-meta { display: flex; gap: var(--space-2); margin-bottom: 2px; }
 .msg-sender { font-size: 11px; color: var(--muted); }
@@ -299,8 +304,8 @@ onUnmounted(() => { chatStore.removeSocketListeners(); if (typingTimer) clearTim
 .chat-input-area { margin: var(--space-3) var(--space-4) var(--space-4); display: flex; align-items: center; padding: 0 var(--space-4); border-radius: var(--radius-xl); gap: var(--space-3); }
 .chat-input { flex: 1; height: 48px; color: var(--ink); font-size: var(--text-base); background: none; border: none; outline: none; }
 .chat-input::placeholder { color: rgba(255,255,255,.22); }
-.chat-send-btn { width: 36px; height: 36px; border-radius: var(--radius-md); background: rgba(0,245,212,.12); color: var(--accent); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background var(--duration-fast) var(--ease-out-expo), transform var(--duration-fast) var(--ease-out-expo); border: none; font-size: 16px; }
-.chat-send-btn:hover:not(:disabled) { background: rgba(0,245,212,.20); transform: translateY(-1px); }
+.chat-send-btn { width: 36px; height: 36px; border-radius: var(--radius-md); background: rgba(212,175,55,.12); color: var(--accent); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background var(--duration-fast) var(--ease-out-expo), transform var(--duration-fast) var(--ease-out-expo); border: none; font-size: 16px; }
+.chat-send-btn:hover:not(:disabled) { background: rgba(212,175,55,.20); transform: translateY(-1px); }
 .chat-send-btn:disabled { opacity: .4; cursor: not-allowed; }
 
 .chat-empty-full { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }

@@ -45,7 +45,7 @@ html, body {
 
 /* 选中文字 */
 ::selection {
-  background: rgba(0, 245, 212, .20);
+  background: rgba(212, 175, 55, .20);
   color: #fff;
 }
 

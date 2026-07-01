@@ -7,6 +7,7 @@ import { success } from '../middleware/errorHandler.js';
 import userRoutes from './user.routes.js';
 import messageRoutes from './message.routes.js';
 import friendRoutes from './friend.routes.js';
+import bindRoutes from './bind.routes.js';
 
 const router: RouterType = Router();
 
@@ -23,5 +24,8 @@ router.use(messageRoutes);
 
 /** 好友相关路由 */
 router.use(friendRoutes);
+
+/** 账号绑定相关路由 */
+router.use(bindRoutes);
 
 export default router;

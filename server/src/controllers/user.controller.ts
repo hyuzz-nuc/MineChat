@@ -49,3 +49,17 @@ export async function searchUsers(req: Request, res: Response): Promise<void> {
   const result = await userService.searchUsers(keyword, req.user!.userId);
   res.json(success(result));
 }
+
+/** 发送登录验证码（无需鉴权） */
+export async function sendLoginCode(req: Request, res: Response): Promise<void> {
+  const { type, target } = req.body;
+  await userService.sendLoginCode(type, target);
+  res.json(success(null, '验证码已发送'));
+}
+
+/** 验证码登录（无需鉴权） */
+export async function loginByCode(req: Request, res: Response): Promise<void> {
+  const { type, target, code } = req.body;
+  const result = await userService.loginByCode(type, target, code);
+  res.json(success(result, '登录成功'));
+}
