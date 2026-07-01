@@ -187,10 +187,12 @@ export async function updateUserProfile(
   return user;
 }
 
-/** 搜索用户（支持UID精确搜索 + 用户名模糊匹配） */
+/** 搜索用户（支持UID精确搜索 + 用户名模糊匹配 + 好友状态） */
 export async function searchUsers(keyword: string, currentUserId: string) {
   // 如果是纯数字且6位，优先按UID精确搜索
   const isUidSearch = /^\d{6}$/.test(keyword);
+  
+  let users: any[] = [];
   
   if (isUidSearch) {
     const user = await prisma.user.findUnique({
@@ -204,26 +206,64 @@ export async function searchUsers(keyword: string, currentUserId: string) {
         status: true,
       },
     });
-    if (user && user.id !== currentUserId) return [user];
-    return [];
+    if (user && user.id !== currentUserId) users = [user];
+  } else {
+    // 用户名模糊匹配
+    users = await prisma.user.findMany({
+      where: {
+        username: { contains: keyword, mode: 'insensitive' },
+        id: { not: currentUserId },
+      },
+      select: {
+        id: true,
+        uid: true,
+        username: true,
+        nickname: true,
+        avatar: true,
+        status: true,
+      },
+      take: 20,
+    });
   }
 
-  // 用户名模糊匹配
-  const users = await prisma.user.findMany({
-    where: {
-      username: { contains: keyword, mode: 'insensitive' },
-      id: { not: currentUserId },
-    },
-    select: {
-      id: true,
-      uid: true,
-      username: true,
-      nickname: true,
-      avatar: true,
-      status: true,
-    },
-    take: 20,
-  });
+  // 为搜索结果附加好友状态
+  if (users.length > 0) {
+    const userIds = users.map(u => u.id);
+    const friendships = await prisma.friendship.findMany({
+      where: {
+        OR: [
+          { requesterId: currentUserId, addresseeId: { in: userIds } },
+          { addresseeId: currentUserId, requesterId: { in: userIds } },
+        ],
+      },
+      select: {
+        requesterId: true,
+        addresseeId: true,
+        status: true,
+      },
+    });
+
+    // 构建好友状态Map
+    const statusMap = new Map<string, string>();
+    for (const f of friendships) {
+      const otherId = f.requesterId === currentUserId ? f.addresseeId : f.requesterId;
+      let friendStatus = 'NONE';
+      if (f.status === 'ACCEPTED') {
+        friendStatus = 'ACCEPTED';
+      } else if (f.status === 'PENDING') {
+        friendStatus = f.requesterId === currentUserId ? 'PENDING_SENT' : 'PENDING_RECEIVED';
+      } else if (f.status === 'REJECTED') {
+        friendStatus = f.requesterId === currentUserId ? 'REJECTED' : 'NONE';
+      }
+      statusMap.set(otherId, friendStatus);
+    }
+
+    // 附加friendStatus
+    for (const user of users) {
+      (user as any).friendStatus = statusMap.get(user.id) || 'NONE';
+    }
+  }
+
   return users;
 }
 

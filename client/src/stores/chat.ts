@@ -5,7 +5,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { getConversationsApi, getRoomMessagesApi, markReadApi, createDirectRoomApi } from '../api/message';
-import { getFriendListApi, getPendingRequestsApi, acceptFriendRequestApi, rejectFriendRequestApi, sendFriendRequestApi } from '../api/friend';
+import { getFriendListApi, getReceivedRequestsApi, getSentRequestsApi, acceptFriendRequestApi, rejectFriendRequestApi, sendFriendRequestApi } from '../api/friend';
 import { searchUsersApi } from '../api/auth';
 import { useSocket } from '../composables/useSocket';
 
@@ -22,9 +22,15 @@ export interface Friend {
 
 /** 好友请求类型 */
 export interface FriendRequest {
-  id: string;
-  requesterId: string;
+  friendshipId: string;
   requester: { id: string; username: string; nickname: string; avatar: string | null };
+  createdAt: string;
+}
+
+/** 发出的好友请求类型 */
+export interface SentRequest {
+  friendshipId: string;
+  addressee: { id: string; uid: string; username: string; nickname: string; avatar: string | null; status: string };
   createdAt: string;
 }
 
@@ -72,6 +78,17 @@ export interface ChatMessage {
   };
 }
 
+/** 搜索结果类型（含好友状态） */
+export interface SearchResult {
+  id: string;
+  uid: string;
+  username: string;
+  nickname: string;
+  avatar: string | null;
+  status: string;
+  friendStatus: 'NONE' | 'PENDING_SENT' | 'PENDING_RECEIVED' | 'ACCEPTED' | 'REJECTED';
+}
+
 export const useChatStore = defineStore('chat', () => {
   /** 会话列表 */
   const conversations = ref<Conversation[]>([]);
@@ -89,8 +106,10 @@ export const useChatStore = defineStore('chat', () => {
   const sidebarView = ref<'conversations' | 'friends'>('conversations');
   /** 好友列表 */
   const friends = ref<Friend[]>([]);
-  /** 待处理好友请求 */
+  /** 收到的待处理好友请求 */
   const pendingRequests = ref<FriendRequest[]>([]);
+  /** 发出的待处理好友请求 */
+  const sentRequests = ref<SentRequest[]>([]);
   /** 好友加载状态 */
   const loadingFriends = ref(false);
 
@@ -170,7 +189,11 @@ export const useChatStore = defineStore('chat', () => {
 
   /** 接收新消息（Socket推送） */
   function onNewMessage(message: ChatMessage) {
-    if (message.roomId === currentRoomId.value) {
+    // 避免重复：如果是自己发的乐观更新消息，替换本地消息
+    const localIdx = currentMessages.value.findIndex(m => m.id === `local_${message.id}` || m.id === message.id);
+    if (localIdx > -1) {
+      currentMessages.value[localIdx] = message;
+    } else if (message.roomId === currentRoomId.value) {
       currentMessages.value.push(message);
     }
     // 更新会话列表中的最后消息
@@ -211,6 +234,13 @@ export const useChatStore = defineStore('chat', () => {
     } else {
       const idx = list.indexOf(userId);
       if (idx > -1) list.splice(idx, 1);
+    }
+  }
+
+  /** 本地乐观添加消息（发送时立即显示） */
+  function addLocalMessage(message: ChatMessage) {
+    if (message.roomId === currentRoomId.value) {
+      currentMessages.value.push(message);
     }
   }
 
@@ -259,6 +289,7 @@ export const useChatStore = defineStore('chat', () => {
     if (view === 'friends' && friends.value.length === 0) {
       fetchFriends();
       fetchPendingRequests();
+      fetchSentRequests();
     }
   }
 
@@ -275,13 +306,23 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  /** 获取待处理好友请求 */
+  /** 获取收到的待处理好友请求 */
   async function fetchPendingRequests() {
     try {
-      const res: any = await getPendingRequestsApi();
+      const res: any = await getReceivedRequestsApi();
       pendingRequests.value = res.data;
     } catch (err) {
       console.error('获取好友请求失败:', err);
+    }
+  }
+
+  /** 获取发出的待处理好友请求 */
+  async function fetchSentRequests() {
+    try {
+      const res: any = await getSentRequestsApi();
+      sentRequests.value = res.data;
+    } catch (err) {
+      console.error('获取发出的好友请求失败:', err);
     }
   }
 
@@ -290,7 +331,7 @@ export const useChatStore = defineStore('chat', () => {
     try {
       await acceptFriendRequestApi(friendshipId);
       // 从待处理列表移除
-      pendingRequests.value = pendingRequests.value.filter((r) => r.id !== friendshipId);
+      pendingRequests.value = pendingRequests.value.filter((r) => r.friendshipId !== friendshipId);
       // 刷新好友列表
       await fetchFriends();
     } catch (err) {
@@ -302,7 +343,7 @@ export const useChatStore = defineStore('chat', () => {
   async function rejectRequest(friendshipId: string) {
     try {
       await rejectFriendRequestApi(friendshipId);
-      pendingRequests.value = pendingRequests.value.filter((r) => r.id !== friendshipId);
+      pendingRequests.value = pendingRequests.value.filter((r) => r.friendshipId !== friendshipId);
     } catch (err) {
       console.error('拒绝好友请求失败:', err);
     }
@@ -322,7 +363,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   /** 搜索用户（支持UID精确搜索+用户名模糊搜索） */
-  const searchResults = ref<Array<{ id: string; uid: string; username: string; nickname: string; avatar: string | null; status: string }>>([]);
+  const searchResults = ref<SearchResult[]>([]);
   const searching = ref(false);
 
   async function searchUsers(keyword: string) {
@@ -342,8 +383,11 @@ export const useChatStore = defineStore('chat', () => {
   async function sendFriendRequest(targetUserId: string) {
     try {
       await sendFriendRequestApi(targetUserId);
-      // 从搜索结果移除
-      searchResults.value = searchResults.value.filter(u => u.id !== targetUserId);
+      // 更新搜索结果中的好友状态
+      const user = searchResults.value.find(u => u.id === targetUserId);
+      if (user) user.friendStatus = 'PENDING_SENT';
+      // 刷新发出的请求列表
+      await fetchSentRequests();
     } catch (err) {
       console.error('发送好友请求失败:', err);
       throw err;
@@ -363,10 +407,12 @@ export const useChatStore = defineStore('chat', () => {
     sidebarView,
     friends,
     pendingRequests,
+    sentRequests,
     loadingFriends,
     switchSidebar,
     fetchFriends,
     fetchPendingRequests,
+    fetchSentRequests,
     acceptRequest,
     rejectRequest,
     startChatWithFriend,
@@ -379,6 +425,7 @@ export const useChatStore = defineStore('chat', () => {
     selectConversation,
     fetchMessages,
     startDirectChat,
+    addLocalMessage,
     onNewMessage,
     onConversationUpdate,
     setTyping,
