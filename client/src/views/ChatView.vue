@@ -56,8 +56,8 @@ function scrollToBottom() {
 
 function onNavClick(view: 'conversations' | 'friends') { chatStore.switchSidebar(view); }
 async function onFriendClick(userId: string) { try { await chatStore.startChatWithFriend(userId); } catch { /* handled */ } }
-function onAcceptRequest(id: string) { chatStore.acceptRequest(id); }
-function onRejectRequest(id: string) { chatStore.rejectRequest(id); }
+function onAcceptRequest(friendshipId: string) { chatStore.acceptRequest(friendshipId); }
+function onRejectRequest(friendshipId: string) { chatStore.rejectRequest(friendshipId); }
 
 /** 搜索用户 */
 const friendSearchKeyword = ref('');
@@ -72,6 +72,17 @@ function onFriendSearchInput() {
 /** 添加好友 */
 async function onAddFriend(userId: string) {
   try { await chatStore.sendFriendRequest(userId); } catch { /* handled */ }
+}
+
+/** 获取好友状态按钮文本和样式 */
+function getFriendStatusInfo(status: string) {
+  switch (status) {
+    case 'PENDING_SENT': return { text: '已发送邀请', class: 'btn-status-sent', disabled: true };
+    case 'PENDING_RECEIVED': return { text: '待处理请求', class: 'btn-status-received', disabled: true };
+    case 'ACCEPTED': return { text: '已是好友', class: 'btn-status-friend', disabled: true };
+    case 'REJECTED': return { text: '重新发送', class: 'btn-add-friend', disabled: false };
+    default: return { text: '添加好友', class: 'btn-add-friend', disabled: false };
+  }
 }
 
 watch(() => chatStore.currentMessages.length, () => scrollToBottom());
@@ -144,23 +155,43 @@ onUnmounted(() => { chatStore.removeSocketListeners(); if (typingTimer) clearTim
                 <span class="conv-name">{{ user.nickname || user.username }}</span>
                 <span class="user-uid">#{{ user.uid }}</span>
               </div>
-              <button class="btn-add-friend" @click="onAddFriend(user.id)">添加好友</button>
+              <button
+                :class="getFriendStatusInfo(user.friendStatus).class"
+                :disabled="getFriendStatusInfo(user.friendStatus).disabled"
+                @click="!getFriendStatusInfo(user.friendStatus).disabled && onAddFriend(user.id)"
+              >{{ getFriendStatusInfo(user.friendStatus).text }}</button>
             </div>
           </div>
         </div>
+        <!-- 收到的请求 -->
         <div v-if="chatStore.pendingRequests.length > 0" class="friend-requests">
-          <div class="friend-section-label">好友请求</div>
-          <div v-for="req in chatStore.pendingRequests" :key="req.id" class="friend-request-item">
+          <div class="friend-section-label">收到的请求</div>
+          <div v-for="req in chatStore.pendingRequests" :key="req.friendshipId" class="friend-request-item">
             <div class="conv-avatar"><span class="conv-avatar-text">{{ req.requester?.nickname?.charAt(0) || '?' }}</span></div>
             <div class="friend-info">
               <span class="friend-name">{{ req.requester?.nickname || req.requester?.username }}</span>
               <div class="friend-request-actions">
-                <button class="btn-accept" @click="onAcceptRequest(req.id)">同意</button>
-                <button class="btn-reject" @click="onRejectRequest(req.id)">拒绝</button>
+                <button class="btn-accept" @click="onAcceptRequest(req.friendshipId)">同意</button>
+                <button class="btn-reject" @click="onRejectRequest(req.friendshipId)">拒绝</button>
               </div>
             </div>
           </div>
         </div>
+        <!-- 发出的请求 -->
+        <div v-if="chatStore.sentRequests.length > 0" class="friend-requests">
+          <div class="friend-section-label">发出的请求</div>
+          <div v-for="req in chatStore.sentRequests" :key="req.friendshipId" class="friend-request-item">
+            <div class="conv-avatar">
+              <img v-if="req.addressee?.avatar" :src="req.addressee.avatar" alt="" />
+              <span v-else class="conv-avatar-text">{{ req.addressee?.nickname?.charAt(0) || '?' }}</span>
+            </div>
+            <div class="friend-info">
+              <span class="friend-name">{{ req.addressee?.nickname || req.addressee?.username }}</span>
+              <span class="friend-status-text">等待对方同意</span>
+            </div>
+          </div>
+        </div>
+        <!-- 我的好友 -->
         <div class="friend-section-label">我的好友</div>
         <div class="sidebar-list">
           <div v-if="chatStore.loadingFriends" class="sidebar-loading"><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span></div>
@@ -252,6 +283,7 @@ onUnmounted(() => { chatStore.removeSocketListeners(); if (typingTimer) clearTim
 .friend-request-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-lg); }
 .friend-info { flex: 1; min-width: 0; }
 .friend-name { font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--ink); }
+.friend-status-text { font-size: 11px; color: var(--muted); font-style: italic; }
 .friend-request-actions { display: flex; gap: var(--space-2); margin-top: 4px; }
 .btn-accept { padding: 2px 12px; border-radius: var(--radius-md); background: rgba(212,175,55,.15); color: var(--accent); border: 1px solid rgba(212,175,55,.3); font-size: 12px; cursor: pointer; transition: background var(--duration-fast) var(--ease-out-expo); }
 .btn-accept:hover { background: rgba(212,175,55,.25); }
@@ -262,6 +294,9 @@ onUnmounted(() => { chatStore.removeSocketListeners(); if (typingTimer) clearTim
 .user-uid { font-size: 11px; color: var(--accent); opacity: .7; font-family: monospace; }
 .btn-add-friend { margin-top: 4px; padding: 2px 12px; border-radius: var(--radius-md); background: rgba(212,175,55,.12); color: var(--accent); border: 1px solid rgba(212,175,55,.25); font-size: 12px; cursor: pointer; transition: background var(--duration-fast) var(--ease-out-expo); }
 .btn-add-friend:hover { background: rgba(212,175,55,.22); }
+.btn-status-sent { margin-top: 4px; padding: 2px 12px; border-radius: var(--radius-md); background: rgba(255,255,255,.04); color: var(--muted); border: 1px solid rgba(255,255,255,.08); font-size: 12px; cursor: not-allowed; opacity: .6; }
+.btn-status-received { margin-top: 4px; padding: 2px 12px; border-radius: var(--radius-md); background: rgba(212,175,55,.08); color: rgba(212,175,55,.6); border: 1px solid rgba(212,175,55,.15); font-size: 12px; cursor: not-allowed; }
+.btn-status-friend { margin-top: 4px; padding: 2px 12px; border-radius: var(--radius-md); background: rgba(255,255,255,.04); color: var(--muted); border: 1px solid rgba(255,255,255,.06); font-size: 12px; cursor: not-allowed; opacity: .5; }
 .search-results { margin-bottom: var(--space-2); }
 
 .conv-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-lg); cursor: pointer; transition: background var(--duration-fast) var(--ease-out-expo); }

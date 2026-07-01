@@ -38,6 +38,11 @@ export async function sendFriendRequest(requesterId: string, addresseeId: string
       // 对方已向自己发送过请求，直接同意
       return acceptFriendRequest(requesterId, existing.id);
     }
+    if (existing.status === 'REJECTED') {
+      // 被拒绝过，删除旧记录重新发送
+      await prisma.friendship.delete({ where: { id: existing.id } });
+      // 继续往下创建新请求
+    }
   }
 
   // 创建好友请求
@@ -103,7 +108,7 @@ export async function rejectFriendRequest(userId: string, friendshipId: string) 
   return updated;
 }
 
-/** 获取好友列表 */
+/** 获取好友列表（只返回ACCEPTED状态） */
 export async function getFriendList(userId: string) {
   const friendships = await prisma.friendship.findMany({
     where: {
@@ -117,7 +122,7 @@ export async function getFriendList(userId: string) {
   });
 
   // 提取对方的信息
-  const friends = friendships.map((f) => {
+  const friends = friendships.map((f: any) => {
     const friendUser = f.requesterId === userId ? f.addressee : f.requester;
     return {
       friendshipId: f.id,
@@ -128,8 +133,8 @@ export async function getFriendList(userId: string) {
   return friends;
 }
 
-/** 获取待处理的好友请求（发给自己的） */
-export async function getPendingRequests(userId: string) {
+/** 获取收到的待处理好友请求（别人发给自己的） */
+export async function getReceivedRequests(userId: string) {
   const requests = await prisma.friendship.findMany({
     where: { addresseeId: userId, status: 'PENDING' },
     include: {
@@ -138,9 +143,26 @@ export async function getPendingRequests(userId: string) {
     orderBy: { createdAt: 'desc' },
   });
 
-  return requests.map((r) => ({
+  return requests.map((r: any) => ({
     friendshipId: r.id,
     requester: r.requester,
+    createdAt: r.createdAt,
+  }));
+}
+
+/** 获取发出的待处理好友请求（自己发给别人的） */
+export async function getSentRequests(userId: string) {
+  const requests = await prisma.friendship.findMany({
+    where: { requesterId: userId, status: 'PENDING' },
+    include: {
+      addressee: { select: { id: true, uid: true, username: true, nickname: true, avatar: true, status: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return requests.map((r: any) => ({
+    friendshipId: r.id,
+    addressee: r.addressee,
     createdAt: r.createdAt,
   }));
 }

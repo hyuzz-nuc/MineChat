@@ -32,8 +32,14 @@ export async function getFriendList(req: Request, res: Response): Promise<void> 
   res.json(success(result));
 }
 
-/** 获取待处理好友请求 */
-export async function getPendingRequests(req: Request, res: Response): Promise<void> {
-  const result = await friendService.getPendingRequests(req.user!.userId);
+/** 获取收到的待处理好友请求 */
+export async function getReceivedRequests(req: Request, res: Response): Promise<void> {
+  const result = await friendService.getReceivedRequests(req.user!.userId);
+  res.json(success(result));
+}
+
+/** 获取发出的待处理好友请求 */
+export async function getSentRequests(req: Request, res: Response): Promise<void> {
+  const result = await friendService.getSentRequests(req.user!.userId);
   res.json(success(result));
 }
